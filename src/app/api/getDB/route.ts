@@ -14,7 +14,7 @@ const andhrapradeshPotholeReports: PotholeReport[] = [
     status: 'new',
     reporter_id: 'user_001',
     reporter_phone: '+91-9876543210',
-    district: 'Hyderabad',
+    district: 'hyderabad',
     subDistrict: 'Banjara Hills',
     location: 'Road No. 12, Banjara Hills'
   },
