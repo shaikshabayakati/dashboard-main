@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { PotholeReport } from '@/types/PotholeReport';
+import { DatabasePotholeReport, PotholeReport } from '@/types/PotholeReport';
+import { mapDatabaseReportsToFrontend } from '@/utils/reportMapper';
 
 interface UsePotholeReportsReturn {
   reports: PotholeReport[];
@@ -18,14 +19,19 @@ export function usePotholeReports(): UsePotholeReportsReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/getDB');
+      const response = await fetch('/api/reports');
 
       if (!response.ok) {
         throw new Error(`Failed to fetch reports: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      setReports(data.reports || []);
+      // API returns array directly, not wrapped in {reports: [...]}
+      const dbReports: DatabasePotholeReport[] = await response.json();
+
+      // Map database schema to frontend schema
+      const mappedReports = mapDatabaseReportsToFrontend(dbReports);
+
+      setReports(mappedReports);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);

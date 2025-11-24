@@ -1,0 +1,34 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF line endings for these files
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Prevent .env files from being committed (extra safety)
+.env filter=git-crypt diff=git-crypt
+.env.* filter=git-crypt diff=git-crypt
+
+# Mark certain files as generated
+*.map linguist-generated=true
+/dist/** linguist-generated=true
+/.next/** linguist-generated=true

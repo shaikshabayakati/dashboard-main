@@ -204,27 +204,73 @@ colors: {
 
 ## Security Best Practices
 
-### API Key Security
+### 🔐 Environment Variables & API Key Security
 
 1. **Never commit `.env` to git** - It's already in `.gitignore`
 2. **Use environment variables** for all sensitive data
-3. **Restrict your API key**:
+3. **The `.env` file contains sensitive information** - never share it publicly
+4. **Always use `.env.example`** as a template for new setups
+
+### 🛡️ Google Maps API Key Security
+
+1. **Restrict your API key**:
    - Set HTTP referrer restrictions for production domains
    - Enable only required APIs (Maps JavaScript API)
    - Monitor usage in Google Cloud Console
+   - Set quotas to prevent unexpected charges
 
-### Production Deployment
+2. **For production environments**:
+   - Use different API keys for development/staging/production
+   - Enable billing alerts in Google Cloud Console
+   - Regularly rotate API keys
+
+### 🔒 Database Security
+
+1. **Database credentials** are in `DATABASE_URL` environment variable
+2. **Never expose database URLs** in client-side code
+3. **Use connection pooling** for production (already configured with Neon)
+4. **Enable SSL** connections (already configured with `sslmode=require`)
+
+### 📁 Files to Keep Private
+
+The following files contain sensitive information and should **NEVER** be committed:
+
+```bash
+.env                    # Contains API keys and database URLs
+.env.local             # Local environment overrides
+.env.production.local  # Production environment variables
+*.pem                  # SSL certificates
+*.key                  # Private keys
+database/              # Local database files
+```
+
+### 🚀 Production Deployment
 
 For production, use server-side environment variable injection:
 
-**Vercel/Netlify**: Set `REACT_APP_GOOGLE_MAPS_API_KEY` in dashboard
+**Vercel/Netlify**: Set environment variables in dashboard:
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_production_api_key
+DATABASE_URL=your_production_database_url
+```
 
 **Docker**:
 ```dockerfile
-ENV REACT_APP_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+ENV DATABASE_URL=${DATABASE_URL}
 ```
 
 **AWS/Azure**: Use secrets manager and inject during build
+
+### ⚠️ Security Checklist
+
+- [ ] `.env` file is in `.gitignore`
+- [ ] No API keys in source code
+- [ ] Google Maps API key is restricted
+- [ ] Database connection uses SSL
+- [ ] Environment variables are properly set in production
+- [ ] API key usage is monitored
+- [ ] Billing alerts are configured
 
 ## Performance Optimization
 

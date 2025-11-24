@@ -1,12 +1,14 @@
-export const getSeverityColor = (severity: number): string => {
-  if (severity < 0.33) return '#10b981'; // green
-  if (severity < 0.67) return '#f59e0b'; // amber
+export const getSeverityColor = (severity: number | null | undefined): string => {
+  const safeSeverity = Number(severity || 0);
+  if (safeSeverity < 0.33) return '#10b981'; // green
+  if (safeSeverity < 0.67) return '#f59e0b'; // amber
   return '#ef4444'; // red
 };
 
-export const getSeverityLabel = (severity: number): string => {
-  if (severity < 0.33) return 'Low';
-  if (severity < 0.67) return 'Medium';
+export const getSeverityLabel = (severity: number | null | undefined): string => {
+  const safeSeverity = Number(severity || 0);
+  if (safeSeverity < 0.33) return 'Low';
+  if (safeSeverity < 0.67) return 'Medium';
   return 'High';
 };
 

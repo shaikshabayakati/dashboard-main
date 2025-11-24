@@ -23,7 +23,7 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 export default function Home() {
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   
-  // Use your custom hook to fetch data from /api/getDB
+  // Use your custom hook to fetch data from /api/reports
   const { reports, isLoading: loading, error } = usePotholeReports();
 
   const handleDistrictSelect = (district: District) => {

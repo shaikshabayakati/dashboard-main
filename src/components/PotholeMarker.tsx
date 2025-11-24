@@ -32,7 +32,7 @@ const PotholeMarker: React.FC<PotholeMarkerProps> = ({ severity, onClick }) => {
             textAnchor="middle"
             fill={color}
           >
-            {(severity * 10).toFixed(1)}
+            {(Number(severity || 0) * 10).toFixed(1)}
           </text>
         </svg>
       </div>

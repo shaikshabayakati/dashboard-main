@@ -24,7 +24,7 @@ const ClusterMarker: React.FC<ClusterMarkerProps> = ({ count, avgSeverity, onCli
         style={{ backgroundColor: color }}
       >
         <div className="text-lg">{count}</div>
-        <div className="text-xs opacity-90">{avgSeverity.toFixed(2)}</div>
+        <div className="text-xs opacity-90">{Number(avgSeverity || 0).toFixed(2)}</div>
       </div>
     </div>
   );
