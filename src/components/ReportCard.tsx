@@ -19,27 +19,36 @@ interface ReportCardProps {
 }
 
 const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = false }) => {
-  const severityColor = getSeverityColor(report.severity);
-  const severityLabel = getSeverityLabel(report.severity);
+  // Use severityLabel from database directly - no numeric fallback
+  const severityColor = getSeverityColor(report.severityLabel);
+  const severityLabel = getSeverityLabel(report.severityLabel);
   const [address, setAddress] = useState<string>('Loading address...');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   useEffect(() => {
-    // Use the location from report if available, otherwise fetch from coordinates
-    if (report.location) {
+    // Priority: 1. Database address, 2. location field, 3. Fetch from coordinates
+    if (report.address) {
+      setAddress(report.address);
+    } else if (report.location) {
       setAddress(report.location);
     } else {
       getAddressFromCoordinates(report.lat, report.lng).then(setAddress);
     }
-  }, [report.lat, report.lng, report.location]);
+  }, [report.lat, report.lng, report.location, report.address]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div
+      className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-auto select-text"
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-gray-900">Report #{report.id}</span>
+            <span className="font-medium text-black-700">Report #{report.id}</span>
           </div>
           <div className="text-sm text-gray-500">
             {getRelativeTime(report.timestamp)} • {formatTimestamp(report.timestamp)}
@@ -96,35 +105,68 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        {/* Severity */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Severity</span>
-          <div className="flex items-center gap-2">
-            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${Number(report.severity || 0) * 100}%`,
-                  backgroundColor: severityColor
-                }}
-              />
-            </div>
-            <span
-              className="font-bold text-sm"
-              style={{ color: severityColor }}
-            >
-              {Number(report.severity || 0).toFixed(2)} ({severityLabel})
-            </span>
-          </div>
-        </div>
-
+        
         {/* Location */}
         <div className="flex items-start justify-between text-sm">
-          <span className="font-medium text-gray-700">Location</span>
-          <span className="text-gray-600 text-right max-w-[60%]">
+          <span className="font-medium text-gray-700">📍 Location</span>
+          <span className="text-gray-600 text-right max-w-[60%] select-text">
             {address}
           </span>
         </div>
+
+        {/* Pothole Count */}
+        {report.detectionCount !== undefined && (
+          <div className="flex items-start justify-between text-sm">
+            <span className="font-medium text-gray-700">🕳️ Pothole Count</span>
+            <span className="text-gray-600 text-right">
+              {report.detectionCount} {report.detectionCount === 1 ? 'pothole' : 'potholes'}
+            </span>
+          </div>
+        )}
+
+        {/* Severity */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">⚠️ Severity</span>
+          <span
+            className="px-3 py-1 rounded-full text-sm font-bold text-white"
+            style={{ backgroundColor: severityColor }}
+          >
+            {severityLabel}
+          </span>
+        </div>
+
+        {/* Impact Score */}
+        {report.impactScore !== undefined && (
+          <div className="flex items-start justify-between text-sm">
+            <div className="flex items-center gap-1 group relative">
+              <span className="font-medium text-gray-700">📈 Impact Score</span>
+              <span className="cursor-help text-gray-400 hover:text-gray-600 transition-colors">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+              {/* Tooltip */}
+              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
+                <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                <p className="leading-relaxed">
+                  The impact score is calculated by combining both pothole severity and the traffic conditions.Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
+                </p>
+              </div>
+            </div>
+            <span className="text-gray-600 text-right font-semibold">
+              {(report.impactScore * 100).toFixed(1)}%
+            </span>
+          </div>
+        )}
 
 
       </div>

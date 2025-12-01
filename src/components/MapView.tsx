@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
@@ -61,7 +61,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
       strictBounds: false
     },
     minZoom: 7,
-    maxZoom: 20
+    maxZoom: 20,
+    clickableIcons: false  // Disable clicking on POI icons (places, businesses, etc.)
   }), []);
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -69,6 +70,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
   const [bounds, setBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [selectedReport, setSelectedReport] = useState<PotholeReport | null>(null);
   const [clusterReports, setClusterReports] = useState<PotholeReport[] | null>(null);
+  const [reportOpenedAtZoom, setReportOpenedAtZoom] = useState<number | null>(null);
+  const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Handle district selection - center map on selected district
   useEffect(() => {
@@ -80,12 +83,13 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
     }
   }, [map, selectedDistrict]);
 
-  // Initialize Supercluster
+  // Initialize Supercluster with settings for proper granular clustering
   const supercluster = useMemo(() => {
     const cluster = new Supercluster({
-      radius: 60,
-      maxZoom: 20,
-      minZoom: 0
+      radius: 60,      // Pixel radius for clustering - larger for better grouping
+      maxZoom: 18,     // Stop clustering at zoom 18, show individual markers beyond this (adds more levels)
+      minZoom: 0,      // Start clustering from zoom 0
+      minPoints: 2,    // Minimum 2 points to form a cluster
     });
 
     const points = reports.map((report) => ({
@@ -104,7 +108,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
     return cluster;
   }, [reports]);
 
-  // Get clusters for current viewport
+  // Get clusters for current viewport with pre-computed dominant labels
   const clusters = useMemo(() => {
     if (!bounds) return [];
 
@@ -115,7 +119,32 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
       bounds.getNorthEast().lat()
     ];
 
-    return supercluster.getClusters(bbox, Math.floor(zoom));
+    const rawClusters = supercluster.getClusters(bbox, Math.floor(zoom));
+
+    // Pre-compute dominant severity labels for all clusters at once
+    return rawClusters.map((cluster) => {
+      if (cluster.properties.cluster) {
+        const leaves = supercluster.getLeaves(cluster.properties.cluster_id!, Infinity);
+        const labelCounts: Record<string, number> = {};
+        leaves.forEach((leaf: any) => {
+          const label = leaf.properties.report.severityLabel || 'unknown';
+          labelCounts[label] = (labelCounts[label] || 0) + 1;
+        });
+        const dominantLabel = Object.entries(labelCounts).reduce(
+          (max, [label, count]) => (count > max.count ? { label, count } : max),
+          { label: 'unknown', count: 0 }
+        ).label;
+
+        return {
+          ...cluster,
+          properties: {
+            ...cluster.properties,
+            dominantSeverityLabel: dominantLabel
+          }
+        };
+      }
+      return cluster;
+    });
   }, [bounds, zoom, supercluster]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -128,38 +157,75 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
   }, []);
 
   const onBoundsChanged = useCallback(() => {
-    if (map) {
+    if (!map) return;
+
+    // Throttle bounds updates to improve performance during panning/zooming
+    if (boundsChangeTimeout.current) {
+      clearTimeout(boundsChangeTimeout.current);
+    }
+
+    boundsChangeTimeout.current = setTimeout(() => {
+      const newZoom = map.getZoom() || 12;
       setBounds(map.getBounds() || null);
-      setZoom(map.getZoom() || 12);
-    }
-  }, [map]);
 
-  const handleClusterClick = useCallback((clusterId: number) => {
-    const expansionZoom = supercluster.getClusterExpansionZoom(clusterId);
-    const cluster = clusters.find(
-      (c) => c.properties.cluster && c.properties.cluster_id === clusterId
-    );
+      // Auto-close report card when zooming out
+      if (selectedReport && reportOpenedAtZoom !== null && newZoom < reportOpenedAtZoom) {
+        setSelectedReport(null);
+        setReportOpenedAtZoom(null);
+      }
 
-    if (!cluster) return;
+      setZoom(newZoom);
+    }, 100); // 100ms throttle
+  }, [map, selectedReport, reportOpenedAtZoom, zoom]);
 
-    const [lng, lat] = cluster.geometry.coordinates;
+  const handleClusterClick = useCallback((clusterId: number, clusterLat: number, clusterLng: number) => {
+    if (!map) return;
 
-    if (expansionZoom >= 20) {
-      // Max zoom reached, show list of reports
-      const leaves = supercluster.getLeaves(clusterId, Infinity);
-      const reportsInCluster = leaves.map((leaf: any) => leaf.properties.report);
-      setClusterReports(reportsInCluster);
-    } else {
-      // Zoom into cluster
-      map?.panTo({ lat, lng });
-      map?.setZoom(expansionZoom);
-    }
-  }, [clusters, map, supercluster]);
+    // Close any open single report when clicking a cluster
+    setSelectedReport(null);
+    setReportOpenedAtZoom(null);
+
+    // Get the zoom level Supercluster recommends for this cluster
+    const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(clusterId), 20);
+
+    // Zoom to the expansion zoom level and center on cluster
+    map.setZoom(expansionZoom);
+    map.panTo({ lat: clusterLat, lng: clusterLng });
+  }, [map, supercluster]);
 
   const handleMarkerClick = useCallback((report: PotholeReport) => {
+    // Close cluster list when clicking a single marker
+    setClusterReports(null);
     setSelectedReport(report);
-    map?.panTo({ lat: report.lat, lng: report.lng });
-  }, [map]);
+    // Track the zoom level when report was opened (for auto-close on zoom out)
+    setReportOpenedAtZoom(map?.getZoom() || zoom);
+
+    // Pan to marker but offset downward so the popup card is fully visible
+    // This places the marker in the lower portion of the screen
+    if (map) {
+      const mapDiv = map.getDiv();
+      const mapHeight = mapDiv.offsetHeight;
+      // Calculate offset: move the center point down by ~30% of map height
+      // so the marker appears in the lower third, leaving room for the card above
+      const projection = map.getProjection();
+      if (projection) {
+        const point = projection.fromLatLngToPoint(new google.maps.LatLng(report.lat, report.lng));
+        if (point) {
+          const scale = Math.pow(2, map.getZoom() || 12);
+          // Offset by ~200 pixels worth of latitude (card height + margin)
+          const offsetY = 200 / scale;
+          const newPoint = new google.maps.Point(point.x, point.y - offsetY);
+          const newLatLng = projection.fromPointToLatLng(newPoint);
+          if (newLatLng) {
+            map.panTo(newLatLng);
+            return;
+          }
+        }
+      }
+      // Fallback: just pan to the marker
+      map.panTo({ lat: report.lat, lng: report.lng });
+    }
+  }, [map, zoom]);
 
   if (!isLoaded) {
     return (
@@ -185,15 +251,9 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
       >
         {clusters.map((cluster) => {
           const [lng, lat] = cluster.geometry.coordinates;
-          const { cluster: isCluster, point_count, cluster_id } = cluster.properties;
+          const { cluster: isCluster, point_count, cluster_id, dominantSeverityLabel } = cluster.properties;
 
           if (isCluster) {
-            // Calculate average severity for cluster
-            const leaves = supercluster.getLeaves(cluster_id!, Infinity);
-            const avgSeverity =
-              leaves.reduce((sum: number, leaf: any) => sum + leaf.properties.report.severity, 0) /
-              leaves.length;
-
             return (
               <OverlayView
                 key={`cluster-${cluster_id}`}
@@ -202,8 +262,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
               >
                 <ClusterMarker
                   count={point_count!}
-                  avgSeverity={avgSeverity}
-                  onClick={() => handleClusterClick(cluster_id!)}
+                  dominantSeverityLabel={dominantSeverityLabel || 'unknown'}
+                  onClick={() => handleClusterClick(cluster_id!, lat, lng)}
                 />
               </OverlayView>
             );
@@ -217,7 +277,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               <PotholeMarker
-                severity={report.severity}
+                severityLabel={report.severityLabel}
                 onClick={() => handleMarkerClick(report)}
               />
             </OverlayView>
@@ -241,7 +301,10 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
               <div className="w-80 max-w-[90vw]">
                 <ReportCard
                   report={selectedReport}
-                  onClose={() => setSelectedReport(null)}
+                  onClose={() => {
+                    setSelectedReport(null);
+                    setReportOpenedAtZoom(null);
+                  }}
                   isExpanded={true}
                 />
               </div>

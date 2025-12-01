@@ -30,15 +30,15 @@ const Legend: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-severity-low"></div>
-                <span className="text-sm text-gray-600">Low (0.0 - 0.33)</span>
+                <span className="text-sm text-gray-600">Low</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-severity-medium"></div>
-                <span className="text-sm text-gray-600">Medium (0.33 - 0.67)</span>
+                <span className="text-sm text-gray-600">Medium</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-severity-high"></div>
-                <span className="text-sm text-gray-600">High (0.67 - 1.0)</span>
+                <span className="text-sm text-gray-600">High</span>
               </div>
             </div>
           </div>
@@ -70,7 +70,7 @@ const Legend: React.FC = () => {
             </div>
           </div>
 
-          {/* Status Types */}
+          {/* Status Types
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-gray-700">Status Types</h4>
             <div className="flex flex-wrap gap-2">
@@ -87,7 +87,7 @@ const Legend: React.FC = () => {
                 Fixed
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Instructions */}
           <div className="space-y-2 pt-2 border-t">

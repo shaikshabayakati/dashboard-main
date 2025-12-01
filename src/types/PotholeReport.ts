@@ -12,6 +12,9 @@ export interface DatabasePotholeReport {
   impact_score: number | null;
   status: string;
   created_at: string;
+  address: string | null;
+  road_name: string | null;
+  road_type: string | null;
   detections: {
     boxes: Array<{
       xmax: number;
@@ -36,7 +39,9 @@ export interface PotholeReport {
   id: string;
   lat: number;
   lng: number;
-  severity: number; // 0.0 - 1.0
+  severity: number; // 0.0 - 1.0 (severity_score from ML model)
+  severityLabel: 'low' | 'medium' | 'high' | 'unknown'; // Direct from ML model
+  impactScore?: number; // 0.0 - 1.0 (combined traffic + severity score)
   timestamp: string;
   images: string[];
   description: string;
@@ -46,6 +51,10 @@ export interface PotholeReport {
   district: string;
   subDistrict: string;
   location?: string;
+  address?: string | null;
+  roadName?: string | null;
+  roadType?: string | null;
+  detectionCount?: number;
 }
 
 export interface ClusterPoint {

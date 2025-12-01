@@ -1,15 +1,17 @@
 'use client';
 
 import React from 'react';
-import { getSeverityColor } from '@/utils/helpers';
+import { getSeverityColor, getSeverityLabel } from '@/utils/helpers';
 
 interface PotholeMarkerProps {
-  severity: number;
+  severityLabel?: string;
   onClick: () => void;
 }
 
-const PotholeMarker: React.FC<PotholeMarkerProps> = ({ severity, onClick }) => {
-  const color = getSeverityColor(severity);
+const PotholeMarker: React.FC<PotholeMarkerProps> = ({ severityLabel, onClick }) => {
+  // Use severityLabel directly from database - no numeric fallback
+  const color = getSeverityColor(severityLabel);
+  const label = getSeverityLabel(severityLabel);
 
   return (
     <div
@@ -27,12 +29,12 @@ const PotholeMarker: React.FC<PotholeMarkerProps> = ({ severity, onClick }) => {
           <text
             x="15"
             y="19"
-            fontSize="10"
+            fontSize="12"
             fontWeight="bold"
             textAnchor="middle"
             fill={color}
           >
-            {(Number(severity || 0) * 10).toFixed(1)}
+            {label.charAt(0)}
           </text>
         </svg>
       </div>

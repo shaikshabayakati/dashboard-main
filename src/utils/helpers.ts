@@ -1,15 +1,27 @@
-export const getSeverityColor = (severity: number | null | undefined): string => {
-  const safeSeverity = Number(severity || 0);
-  if (safeSeverity < 0.33) return '#10b981'; // green
-  if (safeSeverity < 0.67) return '#f59e0b'; // amber
-  return '#ef4444'; // red
+/**
+ * Get severity color based on label from database (ML model prediction)
+ * ONLY uses the label - no numeric fallback
+ */
+export const getSeverityColor = (label: string | null | undefined): string => {
+  if (!label) return '#6b7280'; // gray for unknown
+  const normalized = label.toLowerCase();
+  if (normalized === 'low') return '#10b981'; // green
+  if (normalized === 'medium') return '#f59e0b'; // amber
+  if (normalized === 'high') return '#ef4444'; // red
+  return '#6b7280'; // gray for unknown
 };
 
-export const getSeverityLabel = (severity: number | null | undefined): string => {
-  const safeSeverity = Number(severity || 0);
-  if (safeSeverity < 0.33) return 'Low';
-  if (safeSeverity < 0.67) return 'Medium';
-  return 'High';
+/**
+ * Get severity label - use the label from database directly (ML model prediction)
+ * ONLY uses the label - no numeric fallback
+ */
+export const getSeverityLabel = (label: string | null | undefined): string => {
+  if (!label) return 'Unknown';
+  const normalized = label.toLowerCase();
+  if (normalized === 'low') return 'Low';
+  if (normalized === 'medium') return 'Medium';
+  if (normalized === 'high') return 'High';
+  return 'Unknown';
 };
 
 export const getRelativeTime = (timestamp: string): string => {

@@ -9,14 +9,19 @@ import { DatabasePotholeReport, PotholeReport } from '@/types/PotholeReport';
  * 2. Update this mapDatabaseToFrontend function to map new fields
  */
 export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeReport {
-  // Use severity_score (numeric) from detections if available, otherwise use confidence
+  // Use severity_score (numeric) from database - this is the ML model's output
   const severityValue = dbReport.severity_score ?? dbReport.confidence ?? 0.5;
+
+  // Use the 'severity' column from database (contains 'low', 'medium', 'high')
+  const severityLabel = mapSeverityLabel(dbReport.severity);
 
   return {
     id: String(dbReport.id),
     lat: dbReport.latitude,
     lng: dbReport.longitude,
     severity: severityValue,
+    severityLabel: severityLabel,
+    impactScore: dbReport.impact_score ?? undefined,
     timestamp: dbReport.created_at,
     images: dbReport.image_url ? [dbReport.image_url] : [],
     description: `Pothole detected with ${Math.round((dbReport.confidence ?? 0) * 100)}% confidence`,
@@ -26,7 +31,23 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     district: 'Unknown', // TODO: Add geocoding or district lookup based on lat/lng
     subDistrict: 'Unknown',
     location: `${dbReport.latitude.toFixed(6)}, ${dbReport.longitude.toFixed(6)}`,
+    address: dbReport.address,
+    roadName: dbReport.road_name,
+    roadType: dbReport.road_type,
+    detectionCount: dbReport.detection_count,
   };
+}
+
+/**
+ * Maps database severity_label to frontend severity label type
+ */
+function mapSeverityLabel(dbLabel: string | null): 'low' | 'medium' | 'high' | 'unknown' {
+  if (!dbLabel) return 'unknown';
+  const normalized = dbLabel.toLowerCase().trim();
+  if (normalized === 'low') return 'low';
+  if (normalized === 'medium') return 'medium';
+  if (normalized === 'high') return 'high';
+  return 'unknown';
 }
 
 /**

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { District, andhraPradeshDistricts, defaultStateCenter } from '@/data/districts';
+import { getMandalsByDistrict } from '@/data/mandals';
 import Legend from './Legend';
 
 interface SidebarProps {
@@ -11,10 +12,18 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [selectedMandal, setSelectedMandal] = useState<string>('');
+
+  // Get mandals for the selected district
+  const availableMandals = useMemo(() => {
+    if (!selectedDistrict) return [];
+    return getMandalsByDistrict(selectedDistrict);
+  }, [selectedDistrict]);
 
   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const districtId = event.target.value;
     setSelectedDistrict(districtId);
+    setSelectedMandal(''); // Reset mandal when district changes
 
     if (districtId === '') {
       // Reset to state view
@@ -23,6 +32,31 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
       const district = andhraPradeshDistricts.find((d) => d.id === districtId);
       if (district) {
         onDistrictSelect(district);
+      }
+    }
+  };
+
+  const handleMandalChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const mandalId = event.target.value;
+    setSelectedMandal(mandalId);
+
+    if (mandalId === '') {
+      // Reset to district view
+      const district = andhraPradeshDistricts.find((d) => d.id === selectedDistrict);
+      if (district) {
+        onDistrictSelect(district);
+      }
+    } else {
+      const mandal = availableMandals.find((m) => m.id === mandalId);
+      if (mandal) {
+        // Zoom to mandal location
+        onDistrictSelect({
+          id: mandal.id,
+          name: mandal.name,
+          lat: mandal.lat,
+          lng: mandal.lng,
+          zoom: 13 // Higher zoom for mandal level
+        });
       }
     }
   };
@@ -84,6 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
                 <button
                   onClick={() => {
                     setSelectedDistrict('');
+                    setSelectedMandal('');
                     onDistrictSelect(defaultStateCenter);
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -92,6 +127,44 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
                 </button>
               )}
             </div>
+
+            {/* Mandal/City Selection - Only show when district is selected */}
+            {selectedDistrict && availableMandals.length > 0 && (
+              <div className="space-y-2">
+                <label htmlFor="mandal-select" className="block text-sm font-semibold text-gray-700">
+                  Select Mandal/City
+                </label>
+                <select
+                  id="mandal-select"
+                  value={selectedMandal}
+                  onChange={handleMandalChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                >
+                  <option value="">All Mandals (District View)</option>
+                  {availableMandals
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((mandal) => (
+                      <option key={mandal.id} value={mandal.id}>
+                        {mandal.name}
+                      </option>
+                    ))}
+                </select>
+                {selectedMandal && (
+                  <button
+                    onClick={() => {
+                      setSelectedMandal('');
+                      const district = andhraPradeshDistricts.find((d) => d.id === selectedDistrict);
+                      if (district) {
+                        onDistrictSelect(district);
+                      }
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Clear mandal selection
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Statistics Card */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 space-y-3">

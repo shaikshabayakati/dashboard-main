@@ -5,11 +5,12 @@ export async function GET() {
   try {
     const sql = neon(process.env.DATABASE_URL!);
 
-    // Added "SELECT * FROM" to tell the DB to fetch data
+    // Fetch all columns from pothole_reports
     const data = await sql`SELECT * FROM pothole_reports`;
 
     return NextResponse.json(data);
   } catch (error) {
+    console.error('[API] Error fetching reports:', error);
     return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
   }
 } 
