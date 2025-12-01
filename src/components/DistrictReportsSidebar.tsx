@@ -56,7 +56,7 @@ const DistrictReportsSidebar: React.FC<DistrictReportsSidebarProps> = ({
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-50">
         <div>
           <h2 className="text-lg font-bold text-gray-900">{districtName}</h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-700">
             {filteredAndSortedReports.length} of {reports.length} {reports.length === 1 ? 'Report' : 'Reports'}
           </p>
         </div>
