@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { District, andhraPradeshDistricts, defaultStateCenter } from '@/data/districts';
-import { getMandalsByDistrict } from '@/data/mandals';
+import { District, andhraPradeshDistricts, defaultStateCenter, getMandalsByDistrict } from '@/data/locationData';
 import Legend from './Legend';
 
 interface SidebarProps {
@@ -166,24 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
               </div>
             )}
 
-            {/* Statistics Card */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900">Quick Stats</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Total Reports</span>
-                  <span className="text-sm font-bold text-blue-900">-</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Active Issues</span>
-                  <span className="text-sm font-bold text-orange-600">-</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Fixed</span>
-                  <span className="text-sm font-bold text-green-600">-</span>
-                </div>
-              </div>
-            </div>
+    
 
             {/* Legend Component */}
             <Legend />

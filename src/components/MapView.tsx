@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView, Polygon } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
-import { District, defaultStateCenter } from '@/data/districts';
+import { District, defaultStateCenter } from '@/data/locationData';
+import { getDistrictBoundary } from '@/utils/districtBoundaries';
+import { filterReportsInBoundary } from '@/utils/geometryUtils';
 import ClusterMarker from './ClusterMarker';
 import PotholeMarker from './PotholeMarker';
 import ReportCard from './ReportCard';
 import ClusterListView from './ClusterListView';
+import DistrictReportsSidebar from './DistrictReportsSidebar';
 
 interface MapViewProps {
   reports: PotholeReport[];
@@ -56,11 +59,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
     zoomControlOptions: {
       position: window.google?.maps?.ControlPosition?.RIGHT_CENTER || 8
     },
-    restriction: {
-      latLngBounds: andhraPradesh_Bounds,
-      strictBounds: false
-    },
-    minZoom: 7,
+    minZoom: 3,
     maxZoom: 20,
     clickableIcons: false  // Disable clicking on POI icons (places, businesses, etc.)
   }), []);
@@ -71,11 +70,39 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
   const [selectedReport, setSelectedReport] = useState<PotholeReport | null>(null);
   const [clusterReports, setClusterReports] = useState<PotholeReport[] | null>(null);
   const [reportOpenedAtZoom, setReportOpenedAtZoom] = useState<number | null>(null);
+  const [districtBoundary, setDistrictBoundary] = useState<any>(null);
+  const [showDistrictSidebar, setShowDistrictSidebar] = useState(false);
   const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle district selection - center map on selected district
+  // Load district boundary when district is selected
+  useEffect(() => {
+    async function loadBoundary() {
+      if (!selectedDistrict || selectedDistrict.id === 'andhra-pradesh') {
+        setDistrictBoundary(null);
+        setShowDistrictSidebar(false);
+        return;
+      }
+      
+      const boundary = await getDistrictBoundary(selectedDistrict.id);
+      setDistrictBoundary(boundary);
+      setShowDistrictSidebar(true);
+    }
+
+    loadBoundary();
+  }, [selectedDistrict]);
+
+  // Filter reports within the district boundary
+  const districtReports = useMemo(() => {
+    if (!districtBoundary || !districtBoundary.outerBoundary) {
+      return [];
+    }
+    return filterReportsInBoundary(reports, districtBoundary.outerBoundary);
+  }, [reports, districtBoundary]);
+
+  // Handle district selection - center map on selected district using coordinates from locationData.ts
   useEffect(() => {
     if (map && selectedDistrict) {
+      // Use the coordinates from locationData.ts (districts.ts)
       map.panTo({ lat: selectedDistrict.lat, lng: selectedDistrict.lng });
       if (selectedDistrict.zoom) {
         map.setZoom(selectedDistrict.zoom);
@@ -249,6 +276,23 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
         onBoundsChanged={onBoundsChanged}
         options={mapOptions}
       >
+        {/* District Boundary Polygon - Outer boundary only */}
+        {districtBoundary && (
+          <Polygon
+            key={`district-boundary-${districtBoundary.districtId}`}
+            paths={districtBoundary.outerBoundary.map((coord: any[]) => ({ lat: coord[1], lng: coord[0] }))}
+            options={{
+              fillColor: '#3B82F6',
+              fillOpacity: 0.15,
+              strokeColor: '#2563EB',
+              strokeOpacity: 0.9,
+              strokeWeight: 3,
+              clickable: false,
+              zIndex: 1
+            }}
+          />
+        )}
+
         {clusters.map((cluster) => {
           const [lng, lat] = cluster.geometry.coordinates;
           const { cluster: isCluster, point_count, cluster_id, dominantSeverityLabel } = cluster.properties;
@@ -329,6 +373,15 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict }) => {
         <ClusterListView
           reports={clusterReports}
           onClose={() => setClusterReports(null)}
+        />
+      )}
+
+      {/* District Reports Sidebar */}
+      {showDistrictSidebar && selectedDistrict && (
+        <DistrictReportsSidebar
+          districtName={selectedDistrict.name}
+          reports={districtReports}
+          onClose={() => setShowDistrictSidebar(false)}
         />
       )}
     </div>

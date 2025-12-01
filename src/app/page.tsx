@@ -4,7 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import ClientOnly from '@/components/ClientOnly';
 import Sidebar from '@/components/Sidebar';
-import { District } from '@/data/districts';
+import { District } from '@/data/locationData';
 import { usePotholeReports } from '../hooks/usePotholeReports';
 
 // Dynamically import MapView to prevent SSR issues
