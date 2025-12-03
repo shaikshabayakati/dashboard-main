@@ -1,3 +1,5 @@
+import { loadGeoJSON as loadGeoJSONFromParser, GeoJSONData } from './geoJsonParser';
+
 export interface DistrictBoundary {
   districtName: string;
   districtId: string;
@@ -6,27 +8,23 @@ export interface DistrictBoundary {
   bounds: { north: number; south: number; east: number; west: number }; // Bounding box
 }
 
+export interface MandalBoundary {
+  mandalName: string;
+  mandalId: string;
+  districtName: string;
+  districtId: string;
+  boundary: number[][]; // Mandal boundary polygon
+  center: { lat: number; lng: number };
+  bounds: { north: number; south: number; east: number; west: number };
+}
+
 // Cache for loaded GeoJSON data
-let cachedGeoJSON: any = null;
 let cachedBoundaries: Map<string, DistrictBoundary> | null = null;
+let cachedMandalBoundaries: MandalBoundary[] | null = null;
 
-// Load GeoJSON data from public folder
-async function loadGeoJSON(): Promise<any> {
-  if (cachedGeoJSON) {
-    return cachedGeoJSON;
-  }
-
-  try {
-    const response = await fetch('/MANDAL.geojson');
-    if (!response.ok) {
-      throw new Error('Failed to load GeoJSON');
-    }
-    cachedGeoJSON = await response.json();
-    return cachedGeoJSON;
-  } catch (error) {
-    console.error('Error loading GeoJSON:', error);
-    return null;
-  }
+// Load GeoJSON data from public folder (use the parser utility)
+async function loadGeoJSON(): Promise<GeoJSONData | null> {
+  return loadGeoJSONFromParser();
 }
 
 // Calculate the convex hull (outer boundary) from multiple polygons
@@ -107,14 +105,14 @@ export async function getDistrictBoundaries(): Promise<DistrictBoundary[]> {
     return Array.from(cachedBoundaries.values());
   }
 
-  const mandalGeoJSON = await loadGeoJSON();
-  if (!mandalGeoJSON) return [];
+  const geoJSON = await loadGeoJSON();
+  if (!geoJSON) return [];
 
   const districtMap = new Map<string, number[][]>();
 
   // Collect all coordinate points for each district
-  mandalGeoJSON.features.forEach((feature: any) => {
-    const districtName = feature.properties.DNAME;
+  geoJSON.features.forEach((feature: any) => {
+    const districtName = feature.properties.dtname; // Changed from DNAME to dtname
     
     if (districtName && feature.geometry && feature.geometry.type === 'Polygon') {
       const coordinates = feature.geometry.coordinates[0]; // Get outer ring only
@@ -128,6 +126,11 @@ export async function getDistrictBoundaries(): Promise<DistrictBoundary[]> {
     }
   });
 
+  // Normalize function to match geoJsonParser.ts
+  const normalize = (name: string) => name.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+
   // Create outer boundaries for each district
   cachedBoundaries = new Map();
   districtMap.forEach((points, districtName) => {
@@ -138,7 +141,7 @@ export async function getDistrictBoundaries(): Promise<DistrictBoundary[]> {
     
     cachedBoundaries!.set(districtName, {
       districtName,
-      districtId: districtName.toLowerCase().replace(/\s+/g, '-'),
+      districtId: normalize(districtName),
       outerBoundary,
       center,
       bounds
@@ -154,12 +157,47 @@ export async function getDistrictBoundary(districtId: string): Promise<DistrictB
   return boundaries.find(b => b.districtId === districtId) || null;
 }
 
-// Get all mandals for a specific district
-export async function getMandalsByDistrictName(districtName: string): Promise<any[]> {
-  const mandalGeoJSON = await loadGeoJSON();
-  if (!mandalGeoJSON) return [];
+// Get all mandals with their boundaries
+export async function getAllMandalBoundaries(): Promise<MandalBoundary[]> {
+  if (cachedMandalBoundaries) {
+    return cachedMandalBoundaries;
+  }
 
-  return mandalGeoJSON.features.filter(
-    (feature: any) => feature.properties.DNAME === districtName
-  );
+  const geoJSON = await loadGeoJSON();
+  if (!geoJSON) return [];
+
+  cachedMandalBoundaries = geoJSON.features.map((feature: any) => {
+    const districtName = feature.properties.dtname;
+    const mandalName = feature.properties.sdtname;
+    const coordinates = feature.geometry.coordinates[0];
+    
+    // Normalize function to match geoJsonParser.ts
+    const normalize = (name: string) => name.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    
+    return {
+      mandalName,
+      mandalId: `${normalize(districtName)}-${normalize(mandalName)}`,
+      districtName,
+      districtId: normalize(districtName),
+      boundary: coordinates,
+      center: calculateCenter(coordinates),
+      bounds: calculateBounds(coordinates)
+    };
+  });
+
+  return cachedMandalBoundaries;
+}
+
+// Get all mandals for a specific district
+export async function getMandalsByDistrictId(districtId: string): Promise<MandalBoundary[]> {
+  const allMandals = await getAllMandalBoundaries();
+  return allMandals.filter(mandal => mandal.districtId === districtId);
+}
+
+// Get all mandals for a specific district by name
+export async function getMandalsByDistrictName(districtName: string): Promise<MandalBoundary[]> {
+  const allMandals = await getAllMandalBoundaries();
+  return allMandals.filter(mandal => mandal.districtName === districtName);
 }

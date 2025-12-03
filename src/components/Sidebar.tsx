@@ -1,34 +1,58 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { District, andhraPradeshDistricts, defaultStateCenter, getMandalsByDistrict } from '@/data/locationData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { District, getDistricts, getMandals, defaultStateCenter, getMandalsByDistrict, Mandal } from '@/data/locationData';
 import Legend from './Legend';
 
 interface SidebarProps {
   onDistrictSelect: (district: District) => void;
+  onMandalSelect?: (mandalId: string | null) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect, onMandalSelect }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedMandal, setSelectedMandal] = useState<string>('');
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [allMandals, setAllMandals] = useState<Mandal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load districts and mandals from GeoJSON on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [loadedDistricts, loadedMandals] = await Promise.all([
+          getDistricts(),
+          getMandals()
+        ]);
+        setDistricts(loadedDistricts);
+        setAllMandals(loadedMandals);
+      } catch (error) {
+        console.error('Error loading district/mandal data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // Get mandals for the selected district
   const availableMandals = useMemo(() => {
     if (!selectedDistrict) return [];
-    return getMandalsByDistrict(selectedDistrict);
-  }, [selectedDistrict]);
+    return allMandals.filter(mandal => mandal.districtId === selectedDistrict);
+  }, [selectedDistrict, allMandals]);
 
   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const districtId = event.target.value;
     setSelectedDistrict(districtId);
     setSelectedMandal(''); // Reset mandal when district changes
+    onMandalSelect?.(null); // Clear mandal selection
 
     if (districtId === '') {
       // Reset to state view
       onDistrictSelect(defaultStateCenter);
     } else {
-      const district = andhraPradeshDistricts.find((d) => d.id === districtId);
+      const district = districts.find((d) => d.id === districtId);
       if (district) {
         onDistrictSelect(district);
       }
@@ -41,22 +65,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
 
     if (mandalId === '') {
       // Reset to district view
-      const district = andhraPradeshDistricts.find((d) => d.id === selectedDistrict);
+      onMandalSelect?.(null);
+      const district = districts.find((d) => d.id === selectedDistrict);
       if (district) {
         onDistrictSelect(district);
       }
     } else {
-      const mandal = availableMandals.find((m) => m.id === mandalId);
-      if (mandal) {
-        // Zoom to mandal location
-        onDistrictSelect({
-          id: mandal.id,
-          name: mandal.name,
-          lat: mandal.lat,
-          lng: mandal.lng,
-          zoom: 13 // Higher zoom for mandal level
-        });
-      }
+      // Notify parent about mandal selection - the MapView will handle fitting to mandal bounds
+      onMandalSelect?.(mandalId);
     }
   };
 
@@ -102,10 +118,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
                 id="district-select"
                 value={selectedDistrict}
                 onChange={handleDistrictChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                disabled={isLoading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm disabled:opacity-50"
               >
-                <option value="">All Districts (State View)</option>
-                {andhraPradeshDistricts
+                <option value="">{isLoading ? 'Loading...' : 'All Districts (State View)'}</option>
+                {districts
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map((district) => (
                     <option key={district.id} value={district.id}>
@@ -152,7 +169,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect }) => {
                   <button
                     onClick={() => {
                       setSelectedMandal('');
-                      const district = andhraPradeshDistricts.find((d) => d.id === selectedDistrict);
+                      onMandalSelect?.(null);
+                      const district = districts.find((d) => d.id === selectedDistrict);
                       if (district) {
                         onDistrictSelect(district);
                       }

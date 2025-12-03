@@ -22,12 +22,17 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 
 export default function Home() {
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
+  const [selectedMandalId, setSelectedMandalId] = useState<string | null>(null);
   
   // Use your custom hook to fetch data from /api/reports
   const { reports, isLoading: loading, error } = usePotholeReports();
 
   const handleDistrictSelect = (district: District) => {
     setSelectedDistrict(district);
+  };
+
+  const handleMandalSelect = (mandalId: string | null) => {
+    setSelectedMandalId(mandalId);
   };
 
   if (loading) {
@@ -55,9 +60,9 @@ export default function Home() {
           </div>
         }
       >
-        <Sidebar onDistrictSelect={handleDistrictSelect} />
+        <Sidebar onDistrictSelect={handleDistrictSelect} onMandalSelect={handleMandalSelect} />
         <main className="w-full h-full">
-          <MapView reports={reports} selectedDistrict={selectedDistrict} />
+          <MapView reports={reports} selectedDistrict={selectedDistrict} selectedMandalId={selectedMandalId} />
         </main>
       </ClientOnly>
     </div>

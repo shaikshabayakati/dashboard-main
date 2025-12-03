@@ -30,3 +30,15 @@ export function filterReportsInBoundary(
     isPointInPolygon({ lat: report.lat, lng: report.lng }, boundary)
   );
 }
+
+// Filter reports that fall within any of multiple boundaries (e.g., mandals in a district)
+export function filterReportsInAnyBoundary(
+  reports: PotholeReport[],
+  boundaries: number[][][]
+): PotholeReport[] {
+  return reports.filter(report => 
+    boundaries.some(boundary => 
+      isPointInPolygon({ lat: report.lat, lng: report.lng }, boundary)
+    )
+  );
+}

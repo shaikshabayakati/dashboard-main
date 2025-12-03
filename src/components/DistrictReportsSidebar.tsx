@@ -7,6 +7,7 @@ import { X, Filter } from 'lucide-react';
 
 interface DistrictReportsSidebarProps {
   districtName: string;
+  mandalName?: string | null;
   reports: PotholeReport[];
   onClose: () => void;
 }
@@ -16,6 +17,7 @@ type SeverityFilter = 'all' | 'high' | 'medium' | 'low';
 
 const DistrictReportsSidebar: React.FC<DistrictReportsSidebarProps> = ({ 
   districtName, 
+  mandalName,
   reports,
   onClose 
 }) => {
@@ -55,7 +57,12 @@ const DistrictReportsSidebar: React.FC<DistrictReportsSidebarProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-50">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">{districtName}</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            {mandalName ? mandalName : districtName}
+          </h2>
+          {mandalName && (
+            <p className="text-xs text-gray-500">{districtName}</p>
+          )}
           <p className="text-sm text-gray-700">
             {filteredAndSortedReports.length} of {reports.length} {reports.length === 1 ? 'Report' : 'Reports'}
           </p>
