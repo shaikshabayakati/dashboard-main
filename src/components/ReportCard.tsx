@@ -114,6 +114,46 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
           </span>
         </div>
 
+        {/* Road Information */}
+        {(report.roadName || report.roadNameFromGeoJson) && (
+          <div className="flex items-start justify-between text-sm">
+            <span className="font-medium text-gray-700">🛣️ Road</span>
+            <span className="text-gray-600 text-right max-w-[60%] select-text">
+              {report.roadNameFromGeoJson || report.roadName || 'Unknown Road'}
+              {(report.roadType || report.roadTypeFromGeoJson) && (
+                <span className="text-gray-500 ml-1">
+                  ({report.roadTypeFromGeoJson || report.roadType})
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Road Ownership */}
+        {report.roadOwnership && report.roadOwnership !== 'Unknown' && (
+          <div className="flex items-start justify-between text-sm">
+            <span className="font-medium text-gray-700">🏛️ Ownership</span>
+            <span className="text-gray-600 text-right max-w-[60%] select-text">
+              {report.roadOwnership}
+              {report.roadAuthority && report.roadAuthority !== 'Unknown' && (
+                <span className="text-gray-500 block text-xs">
+                  Authority: {report.roadAuthority}
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Road Classification */}
+        {report.roadClassification && report.roadClassification !== 'Unknown' && (
+          <div className="flex items-start justify-between text-sm">
+            <span className="font-medium text-gray-700">📋 Class</span>
+            <span className="text-gray-600 text-right max-w-[60%] select-text">
+              {report.roadClassification}
+            </span>
+          </div>
+        )}
+
         {/* Pothole Count */}
         {report.detectionCount !== undefined && (
           <div className="flex items-start justify-between text-sm">

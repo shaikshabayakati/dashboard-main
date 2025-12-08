@@ -27,7 +27,7 @@ const ClusterListView: React.FC<ClusterListViewProps> = ({ reports, onClose, onZ
   }, {} as Record<string, number>);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl z-40 flex flex-col">
+    <div className="fixed inset-y-0 right-0 w-full md:w-97 bg-white shadow-2xl z-40 flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
         <div className="flex justify-between items-start mb-3">

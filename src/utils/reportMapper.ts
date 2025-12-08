@@ -34,6 +34,12 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     address: dbReport.address,
     roadName: dbReport.road_name,
     roadType: dbReport.road_type,
+    roadOwnership: dbReport.road_ownership,
+    roadAuthority: dbReport.road_authority,
+    roadClassification: dbReport.road_classification,
+    roadNameFromGeoJson: dbReport.road_name_from_geojson,
+    roadTypeFromGeoJson: dbReport.road_type_from_geojson,
+    distanceToRoad: dbReport.distance_to_road,
     detectionCount: dbReport.detection_count,
   };
 }

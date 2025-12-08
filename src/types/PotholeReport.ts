@@ -15,6 +15,12 @@ export interface DatabasePotholeReport {
   address: string | null;
   road_name: string | null;
   road_type: string | null;
+  road_ownership: string | null;
+  road_authority: string | null;
+  road_classification: string | null;
+  road_name_from_geojson: string | null;
+  road_type_from_geojson: string | null;
+  distance_to_road: number | null;
   detections: {
     boxes: Array<{
       xmax: number;
@@ -54,6 +60,12 @@ export interface PotholeReport {
   address?: string | null;
   roadName?: string | null;
   roadType?: string | null;
+  roadOwnership?: string | null;
+  roadAuthority?: string | null;
+  roadClassification?: string | null;
+  roadNameFromGeoJson?: string | null;
+  roadTypeFromGeoJson?: string | null;
+  distanceToRoad?: number | null;
   detectionCount?: number;
 }
 
