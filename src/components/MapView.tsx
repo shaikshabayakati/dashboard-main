@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView, Polygon } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView, Polygon, Polyline } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
 import { District, defaultStateCenter } from '@/data/locationData';
