@@ -109,4 +109,6 @@ temp/
 *.bak
 *.backup 
 
-*.AP_Roads_with_Metadata.geojson
+*.geojson
+.geojson
+/geojson
