@@ -48,6 +48,7 @@ export interface PotholeReport {
   severity: number; // 0.0 - 1.0 (severity_score from ML model)
   severityLabel: 'low' | 'medium' | 'high' | 'unknown'; // Direct from ML model
   impactScore?: number; // 0.0 - 1.0 (combined traffic + severity score)
+  confidence?: number; // 0.0 - 1.0 (ML model confidence score)
   timestamp: string;
   images: string[];
   description: string;
