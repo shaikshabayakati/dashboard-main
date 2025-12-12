@@ -392,11 +392,11 @@ export default function StatsView() {
                               <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden max-w-[60px]">
                                 <div
                                   className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                                  style={{ width: `${(report.impactScore || 0) * 100}%` }}
+                                  style={{ width: `${Math.min((report.impactScore || 0) / 10 * 100, 100)}%` }}
                                 ></div>
                               </div>
                               <span className="text-xs text-gray-400 font-medium min-w-[35px]">
-                                {report.impactScore ? (report.impactScore * 100).toFixed(0) + '%' : 'N/A'}
+                                {report.impactScore ? report.impactScore.toFixed(1) : 'N/A'}
                               </span>
                             </div>
                           </td>
