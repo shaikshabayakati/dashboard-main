@@ -13,6 +13,8 @@ export interface DatabasePotholeReport {
   status: string;
   created_at: string;
   address: string | null;
+  district: string | null;
+  mandal: string | null;
   road_name: string | null;
   road_type: string | null;
   road_ownership: string | null;
@@ -20,7 +22,6 @@ export interface DatabasePotholeReport {
   road_classification: string | null;
   road_name_from_geojson: string | null;
   road_type_from_geojson: string | null;
-  distance_to_road: number | null;
   detections: {
     boxes: Array<{
       xmax: number;
@@ -57,6 +58,7 @@ export interface PotholeReport {
   reporter_phone?: string | null;
   district: string;
   subDistrict: string;
+  mandal?: string; // Some reports have this field instead of subDistrict
   location?: string;
   address?: string | null;
   roadName?: string | null;
@@ -66,7 +68,6 @@ export interface PotholeReport {
   roadClassification?: string | null;
   roadNameFromGeoJson?: string | null;
   roadTypeFromGeoJson?: string | null;
-  distanceToRoad?: number | null;
   detectionCount?: number;
 }
 

@@ -28,8 +28,9 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     status: mapStatus(dbReport.status),
     reporter_id: dbReport.user_phone,
     reporter_phone: dbReport.user_phone,
-    district: 'Unknown', // TODO: Add geocoding or district lookup based on lat/lng
-    subDistrict: 'Unknown',
+    district: dbReport.district || 'Unknown',
+    subDistrict: dbReport.mandal || 'Unknown',
+    mandal: dbReport.mandal || undefined,
     location: `${dbReport.latitude.toFixed(6)}, ${dbReport.longitude.toFixed(6)}`,
     address: dbReport.address,
     roadName: dbReport.road_name,
@@ -39,7 +40,6 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     roadClassification: dbReport.road_classification,
     roadNameFromGeoJson: dbReport.road_name_from_geojson,
     roadTypeFromGeoJson: dbReport.road_type_from_geojson,
-    distanceToRoad: dbReport.distance_to_road,
     detectionCount: dbReport.detection_count,
   };
 }
