@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import ClientOnly from '@/components/ClientOnly';
 import Sidebar from '@/components/Sidebar';
-import { District } from '@/data/locationData';
 import { usePotholeReports } from '@/hooks/usePotholeReports';
 
 // Dynamically import MapView to prevent SSR issues
@@ -21,18 +20,28 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 });
 
 export default function Dashboard() {
-    const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
-    const [selectedMandalId, setSelectedMandalId] = useState<string | null>(null);
+    const [filters, setFilters] = useState<{ district: string | null; mandal: string | null }>({
+        district: null,
+        mandal: null
+    });
 
     // Use your custom hook to fetch data from /api/reports
     const { reports, isLoading: loading, error } = usePotholeReports();
 
-    const handleDistrictSelect = (district: District) => {
-        setSelectedDistrict(district);
-    };
+    // Filter reports based on selected district and mandal
+    const filteredReports = useMemo(() => {
+        return reports.filter(report => {
+            if (filters.district && report.district !== filters.district) return false;
+            if (filters.mandal) {
+                const reportMandal = report.mandal || report.subDistrict;
+                if (reportMandal !== filters.mandal) return false;
+            }
+            return true;
+        });
+    }, [reports, filters]);
 
-    const handleMandalSelect = (mandalId: string | null) => {
-        setSelectedMandalId(mandalId);
+    const handleFilterChange = (newFilters: { district: string | null; mandal: string | null }) => {
+        setFilters(newFilters);
     };
 
     if (loading) {
@@ -60,9 +69,9 @@ export default function Dashboard() {
                     </div>
                 }
             >
-                <Sidebar onDistrictSelect={handleDistrictSelect} onMandalSelect={handleMandalSelect} />
+                <Sidebar reports={reports} onFilterChange={handleFilterChange} />
                 <main className="w-full h-full">
-                    <MapView reports={reports} selectedDistrict={selectedDistrict} selectedMandalId={selectedMandalId} />
+                    <MapView reports={filteredReports} filters={filters} />
                 </main>
             </ClientOnly>
         </div>

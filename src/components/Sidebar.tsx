@@ -1,79 +1,75 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { District, getDistricts, getMandals, defaultStateCenter, getMandalsByDistrict, Mandal } from '@/data/locationData';
+import React, { useState, useMemo } from 'react';
+import { PotholeReport } from '@/types/PotholeReport';
 import Legend from './Legend';
 
 interface SidebarProps {
-  onDistrictSelect: (district: District) => void;
-  onMandalSelect?: (mandalId: string | null) => void;
+  reports: PotholeReport[];
+  onFilterChange: (filters: { district: string | null; mandal: string | null }) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect, onMandalSelect }) => {
+const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedMandal, setSelectedMandal] = useState<string>('');
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [allMandals, setAllMandals] = useState<Mandal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Load districts and mandals from GeoJSON on mount
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [loadedDistricts, loadedMandals] = await Promise.all([
-          getDistricts(),
-          getMandals()
-        ]);
-        setDistricts(loadedDistricts);
-        setAllMandals(loadedMandals);
-      } catch (error) {
-        console.error('Error loading district/mandal data:', error);
-      } finally {
-        setIsLoading(false);
+  // Extract unique districts from reports
+  const districts = useMemo(() => {
+    const districtSet = new Set<string>();
+    reports.forEach(report => {
+      if (report.district && report.district.trim()) {
+        districtSet.add(report.district.trim());
       }
-    }
-    loadData();
-  }, []);
+    });
+    return Array.from(districtSet).sort();
+  }, [reports]);
 
-  // Get mandals for the selected district
+  // Extract unique mandals from reports (for selected district or all)
   const availableMandals = useMemo(() => {
-    if (!selectedDistrict) return [];
-    return allMandals.filter(mandal => mandal.districtId === selectedDistrict);
-  }, [selectedDistrict, allMandals]);
+    const mandalSet = new Set<string>();
+    reports.forEach(report => {
+      const mandal = report.mandal || report.subDistrict;
+      // If a district is selected, only show mandals from that district
+      if (selectedDistrict) {
+        if (report.district === selectedDistrict && mandal && mandal.trim()) {
+          mandalSet.add(mandal.trim());
+        }
+      } else {
+        // Show all mandals if no district selected
+        if (mandal && mandal.trim()) {
+          mandalSet.add(mandal.trim());
+        }
+      }
+    });
+    return Array.from(mandalSet).sort();
+  }, [reports, selectedDistrict]);
 
   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const districtId = event.target.value;
-    setSelectedDistrict(districtId);
+    const districtValue = event.target.value;
+    setSelectedDistrict(districtValue);
     setSelectedMandal(''); // Reset mandal when district changes
-    onMandalSelect?.(null); // Clear mandal selection
-
-    if (districtId === '') {
-      // Reset to state view
-      onDistrictSelect(defaultStateCenter);
-    } else {
-      const district = districts.find((d) => d.id === districtId);
-      if (district) {
-        onDistrictSelect(district);
-      }
-    }
+    
+    onFilterChange({
+      district: districtValue || null,
+      mandal: null
+    });
   };
 
   const handleMandalChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const mandalId = event.target.value;
-    setSelectedMandal(mandalId);
+    const mandalValue = event.target.value;
+    setSelectedMandal(mandalValue);
+    
+    onFilterChange({
+      district: selectedDistrict || null,
+      mandal: mandalValue || null
+    });
+  };
 
-    if (mandalId === '') {
-      // Reset to district view
-      onMandalSelect?.(null);
-      const district = districts.find((d) => d.id === selectedDistrict);
-      if (district) {
-        onDistrictSelect(district);
-      }
-    } else {
-      // Notify parent about mandal selection - the MapView will handle fitting to mandal bounds
-      onMandalSelect?.(mandalId);
-    }
+  const handleClearAll = () => {
+    setSelectedDistrict('');
+    setSelectedMandal('');
+    onFilterChange({ district: null, mandal: null });
   };
 
   return (
@@ -107,83 +103,76 @@ const Sidebar: React.FC<SidebarProps> = ({ onDistrictSelect, onMandalSelect }) =
             <div className="border-b border-gray-200 pb-4">
               <h1 className="text-xl font-bold text-gray-900">Pothole Dashboard</h1>
               <p className="text-sm text-gray-500 mt-1">Andhra Pradesh</p>
+              {(selectedDistrict || selectedMandal) && (
+                <p className="text-xs text-blue-600 mt-2">
+                  {reports.filter(r => 
+                    (!selectedDistrict || r.district === selectedDistrict) &&
+                    (!selectedMandal || r.mandal === selectedMandal || r.subDistrict === selectedMandal)
+                  ).length} reports shown
+                </p>
+              )}
             </div>
 
             {/* District Selection */}
             <div className="space-y-2">
               <label htmlFor="district-select" className="block text-sm font-semibold text-gray-700">
-                Select District
+                Filter by District
               </label>
               <select
                 id="district-select"
                 value={selectedDistrict}
                 onChange={handleDistrictChange}
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm disabled:opacity-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
               >
-                <option value="">{isLoading ? 'Loading...' : 'All Districts (State View)'}</option>
-                {districts
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((district) => (
-                    <option key={district.id} value={district.id}>
-                      {district.name}
-                    </option>
-                  ))}
+                <option value="">All Districts ({districts.length} districts)</option>
+                {districts.map((district) => (
+                  <option key={district} value={district}>
+                    {district} ({reports.filter(r => r.district === district).length})
+                  </option>
+                ))}
               </select>
-              {selectedDistrict && (
-                <button
-                  onClick={() => {
-                    setSelectedDistrict('');
-                    setSelectedMandal('');
-                    onDistrictSelect(defaultStateCenter);
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Clear selection
-                </button>
-              )}
             </div>
 
-            {/* Mandal/City Selection - Only show when district is selected */}
-            {selectedDistrict && availableMandals.length > 0 && (
-              <div className="space-y-2">
-                <label htmlFor="mandal-select" className="block text-sm font-semibold text-gray-700">
-                  Select Mandal/City
-                </label>
-                <select
-                  id="mandal-select"
-                  value={selectedMandal}
-                  onChange={handleMandalChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
-                >
-                  <option value="">All Mandals (District View)</option>
-                  {availableMandals
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((mandal) => (
-                      <option key={mandal.id} value={mandal.id}>
-                        {mandal.name}
-                      </option>
-                    ))}
-                </select>
-                {selectedMandal && (
-                  <button
-                    onClick={() => {
-                      setSelectedMandal('');
-                      onMandalSelect?.(null);
-                      const district = districts.find((d) => d.id === selectedDistrict);
-                      if (district) {
-                        onDistrictSelect(district);
-                      }
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Clear mandal selection
-                  </button>
-                )}
-              </div>
-            )}
+            {/* Mandal/Sub-district Selection */}
+            <div className="space-y-2">
+              <label htmlFor="mandal-select" className="block text-sm font-semibold text-gray-700">
+                Filter by Mandal/Sub-district
+              </label>
+              <select
+                id="mandal-select"
+                value={selectedMandal}
+                onChange={handleMandalChange}
+                disabled={!selectedDistrict && availableMandals.length === 0}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {selectedDistrict 
+                    ? `All Mandals in ${selectedDistrict} (${availableMandals.length})` 
+                    : `All Mandals (${availableMandals.length})`}
+                </option>
+                {availableMandals.map((mandal) => {
+                  const count = reports.filter(r => 
+                    (r.mandal === mandal || r.subDistrict === mandal) &&
+                    (!selectedDistrict || r.district === selectedDistrict)
+                  ).length;
+                  return (
+                    <option key={mandal} value={mandal}>
+                      {mandal} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
 
-    
+            {/* Clear Filters Button */}
+            {(selectedDistrict || selectedMandal) && (
+              <button
+                onClick={handleClearAll}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Clear All Filters
+              </button>
+            )}
 
             {/* Legend Component */}
             <Legend />

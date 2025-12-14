@@ -6,7 +6,7 @@ import { PotholeReport } from '@/types/PotholeReport';
 
 export default function StatsView() {
   const { reports, isLoading, error } = usePotholeReports();
-  
+
   // Filter states
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('');
@@ -21,30 +21,30 @@ export default function StatsView() {
   // Calculate geographic statistics
   const stats = useMemo(() => {
     const total = reports.length;
-    
+
     // Count by district
     const districtCounts: Record<string, number> = {};
     reports.forEach(r => {
       const district = r.district || 'Unknown';
       districtCounts[district] = (districtCounts[district] || 0) + 1;
     });
-    
+
     // Count by mandal/subdistrict
     const mandalCounts: Record<string, number> = {};
     reports.forEach(r => {
       const mandal = r.mandal || r.subDistrict || 'Unknown';
       mandalCounts[mandal] = (mandalCounts[mandal] || 0) + 1;
     });
-    
+
     // Get top 3 districts and mandals
     const topDistricts = Object.entries(districtCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 3);
-      
+
     const topMandals = Object.entries(mandalCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 3);
-    
+
     return {
       total,
       topDistricts,
@@ -63,7 +63,7 @@ export default function StatsView() {
 
     // Location filter
     if (locationFilter) {
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.address?.toLowerCase().includes(locationFilter.toLowerCase()) ||
         r.roadName?.toLowerCase().includes(locationFilter.toLowerCase()) ||
         r.district?.toLowerCase().includes(locationFilter.toLowerCase()) ||
@@ -136,7 +136,7 @@ export default function StatsView() {
             Filters
           </h2>
         </div>
-        
+
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Severity Filter */}
           <div>
@@ -193,31 +193,28 @@ export default function StatsView() {
             <div className="space-y-2">
               <button
                 onClick={() => setSortBy('recent')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sortBy === 'recent'
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'recent'
                     ? 'bg-purple-500 text-white'
                     : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Most Recent
               </button>
               <button
                 onClick={() => setSortBy('severity')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sortBy === 'severity'
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'severity'
                     ? 'bg-purple-500 text-white'
                     : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Severity
               </button>
               <button
                 onClick={() => setSortBy('impact')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sortBy === 'impact'
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'impact'
                     ? 'bg-purple-500 text-white'
                     : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Impact Score
               </button>
@@ -281,245 +278,187 @@ export default function StatsView() {
           <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Overview of pothole reports</p>
         </div>
 
-        {/* Stats Cards and Reports - Scrollable Content */} 
+        {/* Reports List - Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* Total Reports Card */}
-            <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} rounded-lg p-4 border shadow-sm`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Total Reports</span>
-                <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+          <div className="p-4">
+            {/* Reports List */}
+            <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} rounded-lg border overflow-hidden shadow-sm`}>
+              <div className={`px-4 py-3 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-b`}>
+                <h2 className="text-base font-semibold">Reports List</h2>
               </div>
-              <div className="text-2xl font-bold">{stats.total.toLocaleString()}</div>
-            </div>
 
-            {/* Top Districts Card */}
-            <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} rounded-lg p-4 border shadow-sm`}>
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm font-semibold`}>Top Districts</span>
-              </div>
-              <div className="space-y-1">
-                {stats.topDistricts.map(([district, count], idx) => (
-                  <div key={district} className="flex justify-between items-center text-sm">
-                    <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{idx + 1}. {district}</span>
-                    <span className="text-purple-500 font-semibold">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top Mandals Card */}
-            <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} rounded-lg p-4 border shadow-sm`}>
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm font-semibold`}>Top Mandals</span>
-              </div>
-              <div className="space-y-1">
-                {stats.topMandals.map(([mandal, count], idx) => (
-                  <div key={mandal} className="flex justify-between items-center text-sm">
-                    <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{idx + 1}. {mandal}</span>
-                    <span className="text-green-500 font-semibold">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Reports List */}
-          <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} rounded-lg border overflow-hidden shadow-sm`}>
-            <div className={`px-4 py-3 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-b`}>
-              <h2 className="text-base font-semibold">Reports List</h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={`${isDarkMode ? 'bg-[#1a1b23] border-gray-800' : 'bg-gray-50 border-gray-200'} border-b`}>
-                  <tr>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      ID
-                    </th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      Date & Time
-                    </th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      Location
-                    </th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      Severity
-                    </th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      Impact Score
-                    </th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                      Status
-                    </th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className={`${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'} divide-y`}>
-                  {filteredReports.length === 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className={`${isDarkMode ? 'bg-[#1a1b23] border-gray-800' : 'bg-gray-50 border-gray-200'} border-b`}>
                     <tr>
-                      <td colSpan={7} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
-                        No reports found matching the filters
-                      </td>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        ID
+                      </th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        Date & Time
+                      </th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        Location
+                      </th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        Severity
+                      </th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        Impact Score
+                      </th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                        Status
+                      </th>
+                      <th className="px-4 py-3"></th>
                     </tr>
-                  ) : (
-                    filteredReports.map((report) => (
-                      <React.Fragment key={report.id}>
-                        <tr 
-                          className={`${isDarkMode ? 'hover:bg-[#1a1b23]' : 'hover:bg-gray-50'} transition-colors cursor-pointer`}
-                          onClick={() => setExpandedRow(expandedRow === report.id ? null : report.id)}
-                        >
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className={`text-sm font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>#{report.id.slice(0, 8)}</div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              {new Date(report.timestamp).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </div>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                              {new Date(report.timestamp).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate font-medium`}>
-                              {report.district || 'Unknown'} - {report.mandal || report.subDistrict || 'Unknown'}
-                            </div>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} max-w-xs truncate`}>
-                              {report.roadName || 'Unknown Road'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getSeverityColor(report.severityLabel)}`}>
-                              {report.severityLabel.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className={`flex-1 h-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden max-w-[80px]`}>
-                                <div
-                                  className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                                  style={{ width: `${Math.min((report.impactScore || 0) / 10 * 100, 100)}%` }}
-                                ></div>
+                  </thead>
+                  <tbody className={`${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'} divide-y`}>
+                    {filteredReports.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
+                          No reports found matching the filters
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredReports.map((report) => (
+                        <React.Fragment key={report.id}>
+                          <tr
+                            className={`${isDarkMode ? 'hover:bg-[#1a1b23]' : 'hover:bg-gray-50'} transition-colors cursor-pointer`}
+                            onClick={() => setExpandedRow(expandedRow === report.id ? null : report.id)}
+                          >
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className={`text-sm font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>#{report.id.slice(0, 8)}</div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {new Date(report.timestamp).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
                               </div>
-                              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} font-medium min-w-[40px]`}>
-                                {report.impactScore ? report.impactScore.toFixed(1) : 'N/A'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-400/10 text-blue-500 border border-blue-400/20">
-                              {report.status || 'Pending'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <svg 
-                              className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} transition-transform ${expandedRow === report.id ? 'rotate-180' : ''}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </td>
-                        </tr>
-                        {expandedRow === report.id && (
-                          <tr>
-                            <td colSpan={7} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-base">
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>District:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-medium`}>{report.district || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Mandal:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-medium`}>{report.mandal || report.subDistrict || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Full Address:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.address || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Coordinates:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.lat.toFixed(6)}, {report.lng.toFixed(6)}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Name:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadName || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Detection Count:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.detectionCount || 0}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Confidence:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.confidence ? (report.confidence * 100).toFixed(1) + '%' : 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Severity Score:</span>
-                                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.severity ? (report.severity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                                </div>
-                                {report.roadOwnership && (
-                                  <div>
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Ownership:</span>
-                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadOwnership}</p>
-                                  </div>
-                                )}
-                                {report.roadAuthority && (
-                                  <div>
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Authority:</span>
-                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadAuthority}</p>
-                                  </div>
-                                )}
-                                {report.images && report.images.length > 0 && (
-                                  <div className="col-span-full">
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Images:</span>
-                                    <div className="flex gap-2 mt-2 flex-wrap">
-                                      {report.images.map((img, idx) => (
-                                        <img 
-                                          key={idx} 
-                                          src={img} 
-                                          alt={`Report ${idx + 1}`}
-                                          onClick={() => setSelectedImage(img)}
-                                          className={`w-24 h-24 object-cover rounded border ${isDarkMode ? 'border-gray-700 hover:border-purple-500' : 'border-gray-300 hover:border-purple-500'} cursor-pointer transition-all hover:scale-105`}
-                                        />
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                                {new Date(report.timestamp).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
                               </div>
                             </td>
+                            <td className="px-4 py-4">
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate font-medium`}>
+                                {report.district || 'Unknown'} - {report.mandal || report.subDistrict || 'Unknown'}
+                              </div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} max-w-xs truncate`}>
+                                {report.roadName || 'Unknown Road'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getSeverityColor(report.severityLabel)}`}>
+                                {report.severityLabel.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} font-medium`}>
+                                {report.impactScore ? report.impactScore.toFixed(1) : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-400/10 text-blue-500 border border-blue-400/20">
+                                {report.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <svg
+                                className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} transition-transform ${expandedRow === report.id ? 'rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          {expandedRow === report.id && (
+                            <tr>
+                              <td colSpan={7} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-base">
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>District:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-medium`}>{report.district || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Mandal:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-medium`}>{report.mandal || report.subDistrict || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Full Address:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.address || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Coordinates:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.lat.toFixed(6)}, {report.lng.toFixed(6)}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Name:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadName || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Detection Count:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.detectionCount || 0}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Confidence:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.confidence ? (report.confidence * 100).toFixed(1) + '%' : 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Severity Score:</span>
+                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.severity ? (report.severity * 100).toFixed(1) + '%' : 'N/A'}</p>
+                                  </div>
+                                  {report.roadOwnership && (
+                                    <div>
+                                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Ownership:</span>
+                                      <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadOwnership}</p>
+                                    </div>
+                                  )}
+                                  {report.roadAuthority && (
+                                    <div>
+                                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Authority:</span>
+                                      <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadAuthority}</p>
+                                    </div>
+                                  )}
+                                  {report.images && report.images.length > 0 && (
+                                    <div className="col-span-full">
+                                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Images:</span>
+                                      <div className="flex gap-2 mt-2 flex-wrap">
+                                        {report.images.map((img, idx) => (
+                                          <img
+                                            key={idx}
+                                            src={img}
+                                            alt={`Report ${idx + 1}`}
+                                            onClick={() => setSelectedImage(img)}
+                                            className={`w-24 h-24 object-cover rounded border ${isDarkMode ? 'border-gray-700 hover:border-purple-500' : 'border-gray-300 hover:border-purple-500'} cursor-pointer transition-all hover:scale-105`}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
       {/* Image Modal */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
           onClick={() => setSelectedImage(null)}
           style={{ overflow: 'hidden' }}
@@ -534,11 +473,11 @@ export default function StatsView() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          
+
           {/* Image Container */}
           <div className="relative max-w-7xl max-h-[90vh] p-4">
-            <img 
-              src={selectedImage} 
+            <img
+              src={selectedImage}
               alt="Enlarged view"
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}

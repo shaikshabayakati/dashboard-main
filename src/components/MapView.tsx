@@ -1,22 +1,17 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView, Polygon, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
-import { District, defaultStateCenter } from '@/data/locationData';
-import { getDistrictBoundary, getMandalsByDistrictId, MandalBoundary } from '@/utils/districtBoundaries';
-import { filterReportsInAnyBoundary } from '@/utils/geometryUtils';
 import ClusterMarker from './ClusterMarker';
 import PotholeMarker from './PotholeMarker';
 import ReportCard from './ReportCard';
 import ClusterListView from './ClusterListView';
-import DistrictReportsSidebar from './DistrictReportsSidebar';
 
 interface MapViewProps {
   reports: PotholeReport[];
-  selectedDistrict?: District | null;
-  selectedMandalId?: string | null;
+  filters?: { district: string | null; mandal: string | null };
 }
 
 const mapContainerStyle = {
@@ -33,11 +28,11 @@ const andhraPradesh_Bounds = {
 };
 
 const defaultCenter = {
-  lat: defaultStateCenter.lat,
-  lng: defaultStateCenter.lng
+  lat: 15.9129,
+  lng: 79.7400
 };
 
-const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict, selectedMandalId }) => {
+const MapView: React.FC<MapViewProps> = ({ reports, filters }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
@@ -66,116 +61,38 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict, selectedMa
   }), []);
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [zoom, setZoom] = useState(defaultStateCenter.zoom || 7);
+  const [zoom, setZoom] = useState(7);
   const [bounds, setBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [selectedReport, setSelectedReport] = useState<PotholeReport | null>(null);
   const [clusterReports, setClusterReports] = useState<PotholeReport[] | null>(null);
   const [reportOpenedAtZoom, setReportOpenedAtZoom] = useState<number | null>(null);
-  const [districtBoundary, setDistrictBoundary] = useState<any>(null);
-  const [mandalBoundaries, setMandalBoundaries] = useState<MandalBoundary[]>([]);
-  const [showDistrictSidebar, setShowDistrictSidebar] = useState(false);
-  const [selectedMandalBoundary, setSelectedMandalBoundary] = useState<MandalBoundary | null>(null);
   const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Load district boundary and mandals when district is selected
+  // Auto-fit map to show all filtered reports when filters change
   useEffect(() => {
-    async function loadBoundaries() {
-      if (!selectedDistrict || selectedDistrict.id === 'andhra-pradesh') {
-        setDistrictBoundary(null);
-        setMandalBoundaries([]);
-        setShowDistrictSidebar(false);
-        return;
-      }
+    if (map && reports.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      reports.forEach(report => {
+        bounds.extend({ lat: report.lat, lng: report.lng });
+      });
       
-      const boundary = await getDistrictBoundary(selectedDistrict.id);
-      const mandals = await getMandalsByDistrictId(selectedDistrict.id);
-      setDistrictBoundary(boundary);
-      setMandalBoundaries(mandals);
-      setShowDistrictSidebar(true);
-    }
-
-    loadBoundaries();
-  }, [selectedDistrict]);
-
-  // Update selected mandal boundary when mandal is selected and fit map to mandal bounds
-  useEffect(() => {
-    if (selectedMandalId && mandalBoundaries.length > 0) {
-      const mandal = mandalBoundaries.find(m => m.mandalId === selectedMandalId);
-      setSelectedMandalBoundary(mandal || null);
-      
-      // Fit map to mandal bounds when mandal is selected
-      if (mandal && map) {
-        // Validate bounds before using them
-        const { bounds } = mandal;
-        if (bounds && 
-            typeof bounds.south === 'number' && 
-            typeof bounds.north === 'number' && 
-            typeof bounds.west === 'number' && 
-            typeof bounds.east === 'number' &&
-            isFinite(bounds.south) && 
-            isFinite(bounds.north) && 
-            isFinite(bounds.west) && 
-            isFinite(bounds.east) &&
-            bounds.south < bounds.north &&
-            bounds.west < bounds.east) {
-          
-          const mapBounds = new google.maps.LatLngBounds(
-            { lat: bounds.south, lng: bounds.west },
-            { lat: bounds.north, lng: bounds.east }
-          );
-          map.fitBounds(mapBounds, { top: 50, right: 50, bottom: 50, left: 50 }); // Add padding
-        } else {
-          console.warn(`Invalid bounds for mandal: ${mandal.mandalId}`, bounds);
-        }
-      }
-    } else {
-      setSelectedMandalBoundary(null);
-    }
-  }, [selectedMandalId, mandalBoundaries, map]);
-
-  // Filter reports within the district or selected mandal
-  const districtReports = useMemo(() => {
-    if (!districtBoundary || mandalBoundaries.length === 0) {
-      return reports; // Show all reports when no district is selected
-    }
-    
-    // If a mandal is selected, filter reports for that mandal only
-    if (selectedMandalBoundary) {
-      return filterReportsInAnyBoundary(reports, [selectedMandalBoundary.boundary]);
-    }
-    
-    // Otherwise, filter reports that fall within any mandal boundary of the selected district
-    const mandalBoundaryCoords = mandalBoundaries.map(mandal => mandal.boundary);
-    return filterReportsInAnyBoundary(reports, mandalBoundaryCoords);
-  }, [reports, districtBoundary, mandalBoundaries, selectedMandalBoundary]);
-
-  // Handle district selection - center map on selected district using coordinates from locationData.ts
-  useEffect(() => {
-    if (map && selectedDistrict) {
-      // Use the coordinates from locationData.ts (districts.ts)
-      map.panTo({ lat: selectedDistrict.lat, lng: selectedDistrict.lng });
-      if (selectedDistrict.zoom) {
-        map.setZoom(selectedDistrict.zoom);
+      // Only fit bounds if we have a valid bounds object
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 }); // Add padding, extra on left for sidebar
       }
     }
-  }, [map, selectedDistrict]);
+  }, [map, filters]);
 
-  // Initialize Supercluster with settings for proper granular clustering
-  // Use districtReports when a district is selected, otherwise use all reports
+  // Initialize Supercluster - now using pre-filtered reports from Dashboard
   const supercluster = useMemo(() => {
     const cluster = new Supercluster({
       radius: 60,      // Pixel radius for clustering - larger for better grouping
-      maxZoom: 18,     // Stop clustering at zoom 18, show individual markers beyond this (adds more levels)
+      maxZoom: 18,     // Stop clustering at zoom 18, show individual markers beyond this
       minZoom: 0,      // Start clustering from zoom 0
       minPoints: 2,    // Minimum 2 points to form a cluster
     });
 
-    // Use filtered reports if district/mandal is selected, otherwise all reports
-    const reportsToCluster = (selectedDistrict && selectedDistrict.id !== 'andhra-pradesh') 
-      ? districtReports 
-      : reports;
-
-    const points = reportsToCluster.map((report) => ({
+    const points = reports.map((report) => ({
       type: 'Feature' as const,
       properties: {
         cluster: false,
@@ -189,7 +106,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict, selectedMa
 
     cluster.load(points);
     return cluster;
-  }, [reports, districtReports, selectedDistrict]);
+  }, [reports]);
 
   // Get clusters for current viewport with pre-computed dominant labels
   const clusters = useMemo(() => {
@@ -326,50 +243,12 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict, selectedMa
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={defaultCenter}
-        zoom={defaultStateCenter.zoom || 7}
+        zoom={7}
         onLoad={onLoad}
         onUnmount={onUnmount}
         onBoundsChanged={onBoundsChanged}
         options={mapOptions}
       >
-        {/* Mandal Boundaries - Show individual mandals within selected district */}
-        {mandalBoundaries.map((mandal) => {
-          const isSelected = selectedMandalBoundary?.mandalId === mandal.mandalId;
-          
-          // Validate and filter out invalid coordinates
-          const validCoords = mandal.boundary.filter((coord: any[]) => {
-            return Array.isArray(coord) && 
-                   coord.length >= 2 && 
-                   typeof coord[0] === 'number' && 
-                   typeof coord[1] === 'number' &&
-                   !isNaN(coord[0]) && 
-                   !isNaN(coord[1]) &&
-                   isFinite(coord[0]) && 
-                   isFinite(coord[1]);
-          });
-
-          // Skip rendering if no valid coordinates
-          if (validCoords.length < 3) {
-            console.warn(`Invalid boundary data for mandal: ${mandal.mandalId}`);
-            return null;
-          }
-
-          return (
-            <Polygon
-              key={`mandal-boundary-${mandal.mandalId}`}
-              paths={validCoords.map((coord: any[]) => ({ lat: coord[1], lng: coord[0] }))}
-              options={{
-                fillColor: isSelected ? '#F59E0B' : '#10B981',
-                fillOpacity: isSelected ? 0.15 : 0.08,
-                strokeColor: isSelected ? '#D97706' : '#059669',
-                strokeOpacity: isSelected ? 0.9 : 0.6,
-                strokeWeight: isSelected ? 3 : 1.5,
-                clickable: false,
-                zIndex: isSelected ? 3 : 2
-              }}
-            />
-          );
-        })}
 
         {clusters.map((cluster) => {
           const [lng, lat] = cluster.geometry.coordinates;
@@ -451,16 +330,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, selectedDistrict, selectedMa
         <ClusterListView
           reports={clusterReports}
           onClose={() => setClusterReports(null)}
-        />
-      )}
-
-      {/* District Reports Sidebar */}
-      {showDistrictSidebar && selectedDistrict && (
-        <DistrictReportsSidebar
-          districtName={selectedDistrict.name}
-          mandalName={selectedMandalBoundary?.mandalName}
-          reports={districtReports}
-          onClose={() => setShowDistrictSidebar(false)}
         />
       )}
     </div>
