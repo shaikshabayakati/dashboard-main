@@ -13,8 +13,6 @@ export interface DatabasePotholeReport {
   status: string;
   created_at: string;
   address: string | null;
-  district: string | null;
-  mandal: string | null;
   road_name: string | null;
   road_type: string | null;
   road_ownership: string | null;
@@ -22,6 +20,7 @@ export interface DatabasePotholeReport {
   road_classification: string | null;
   road_name_from_geojson: string | null;
   road_type_from_geojson: string | null;
+  distance_to_road: number | null;
   detections: {
     boxes: Array<{
       xmax: number;
@@ -39,6 +38,18 @@ export interface DatabasePotholeReport {
   timestamp: string | null;
   severity_label: string | null;
   severity_score: number | null;
+  district: string | null;
+  mandal: string | null;
+  frontend_id: string | null;
+  free_flow_time: number | null;
+  typical_time: number | null;
+  severity_probabilities: {
+    low: number;
+    high: number;
+    medium: number;
+  } | null;
+  severity_score_weighted: number | null;
+  traffic_score_normalized: number | null;
 }
 
 // Frontend display schema - this is what the UI expects
@@ -56,9 +67,9 @@ export interface PotholeReport {
   status: 'new' | 'triaged' | 'assigned' | 'fixed';
   reporter_id?: string;
   reporter_phone?: string | null;
-  district: string;
-  subDistrict: string;
-  mandal?: string; // Some reports have this field instead of subDistrict
+  district: string | null;
+  mandal: string | null;
+  subDistrict?: string | null;
   location?: string;
   address?: string | null;
   roadName?: string | null;
@@ -68,6 +79,7 @@ export interface PotholeReport {
   roadClassification?: string | null;
   roadNameFromGeoJson?: string | null;
   roadTypeFromGeoJson?: string | null;
+  distanceToRoad?: number | null;
   detectionCount?: number;
 }
 

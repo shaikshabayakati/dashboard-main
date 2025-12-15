@@ -1,6 +1,20 @@
 import { DatabasePotholeReport, PotholeReport } from '@/types/PotholeReport';
 
 /**
+ * Extracts district and mandal from database fields
+ * The database should populate these from GeoJSON data based on coordinates
+ * If not available, returns null instead of parsing from address
+ */
+function extractLocationInfo(dbReport: DatabasePotholeReport): { district: string | null; mandal: string | null } {
+  // Use district and mandal from database if available
+  // These should be populated from GeoJSON based on coordinates
+  return {
+    district: dbReport.district || null,
+    mandal: dbReport.mandal || null
+  };
+}
+
+/**
  * Maps database schema to frontend schema
  * This utility makes it easy to adapt when the database schema changes
  *
@@ -15,6 +29,9 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
   // Use the 'severity' column from database (contains 'low', 'medium', 'high')
   const severityLabel = mapSeverityLabel(dbReport.severity);
 
+  // Extract district and mandal from database or address
+  const { district, mandal } = extractLocationInfo(dbReport);
+
   return {
     id: String(dbReport.id),
     lat: dbReport.latitude,
@@ -28,9 +45,9 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     status: mapStatus(dbReport.status),
     reporter_id: dbReport.user_phone,
     reporter_phone: dbReport.user_phone,
-    district: dbReport.district || 'Unknown',
-    subDistrict: dbReport.mandal || 'Unknown',
-    mandal: dbReport.mandal || undefined,
+    district: district,
+    mandal: mandal,
+    subDistrict: mandal, // Keep for backward compatibility
     location: `${dbReport.latitude.toFixed(6)}, ${dbReport.longitude.toFixed(6)}`,
     address: dbReport.address,
     roadName: dbReport.road_name,
@@ -40,6 +57,7 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     roadClassification: dbReport.road_classification,
     roadNameFromGeoJson: dbReport.road_name_from_geojson,
     roadTypeFromGeoJson: dbReport.road_type_from_geojson,
+    distanceToRoad: dbReport.distance_to_road,
     detectionCount: dbReport.detection_count,
   };
 }
