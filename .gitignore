@@ -109,11 +109,6 @@ temp/
 *.bak
 *.backup 
 
+# GeoJSON files
 *.geojson
-.geojson
-/geojson
-Pothole_reporting\dashboard-main\src\data\ANDHRA PRADESH_SUBDISTRICTS.geojson
-*.Pothole_reporting\dashboard-main\src\data\ANDHRA PRADESH_SUBDISTRICTS.geojson
-ANDHRA PRADESH_SUBDISTRICTS.geojson
-*.ANDHRA PRADESH_SUBDISTRICTS.geojson
-*.F:\1 ALL CODING FILES\dashmain\Pothole_reporting\dashboard-main\src\data\ANDHRA PRADESH_SUBDISTRICTS.geojson
+**/*.geojson
