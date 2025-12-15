@@ -20,7 +20,7 @@ const OLD_TO_NEW_DISTRICT_NAMES: { [key: string]: string } = {
 };
 
 // Reverse mapping from new to old district names
-const NEW_TO_OLD_DISTRICT_NAMES: { [key: string]: string } = Object.fromEntries(
+export const NEW_TO_OLD_DISTRICT_NAMES: { [key: string]: string } = Object.fromEntries(
   Object.entries(OLD_TO_NEW_DISTRICT_NAMES).map(([old, new_]) => [new_, old])
 );
 

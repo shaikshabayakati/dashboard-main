@@ -9,7 +9,8 @@ import {
   loadGeoJSONData, 
   getDistrictsFromGeoJSON, 
   getMandalsForDistrict,
-  filterReportsByGeography
+  filterReportsByGeography,
+  NEW_TO_OLD_DISTRICT_NAMES
 } from '@/utils/geoUtils';
 
 interface GeographicContextType {
@@ -95,14 +96,38 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
 
   const getDistrictBoundary = (districtName: string) => {
     if (!geoJsonData || !geoJsonData.features) {
+      console.error('getDistrictBoundary: No geoJsonData available');
       return null;
     }
     
-    const districtFeatures = geoJsonData.features.filter((feature: any) => 
-      feature.properties.dtname === districtName
+    console.log('getDistrictBoundary called for district:', districtName);
+    
+    // First try to find district-level features with NAME property
+    let districtFeatures = geoJsonData.features.filter((feature: any) => 
+      feature.properties.boundary_level === 'district' && feature.properties.NAME === districtName
     );
     
-    if (districtFeatures.length === 0) return null;
+    console.log('Found district-level features:', districtFeatures.length);
+    
+    // If no district-level features found, get all mandals/sub-districts for this district
+    if (districtFeatures.length === 0) {
+      // Get the old district name to match against dtname field for mandals
+      const oldDistrictName = NEW_TO_OLD_DISTRICT_NAMES[districtName] || districtName;
+      console.log('Mapping district name:', districtName, '→', oldDistrictName);
+      
+      districtFeatures = geoJsonData.features.filter((feature: any) => 
+        feature.properties.dtname === oldDistrictName && feature.properties.sdtname
+      );
+      
+      console.log('Found mandal features for', oldDistrictName + ':', districtFeatures.length);
+    }
+    
+    if (districtFeatures.length === 0) {
+      console.error('No features found for district:', districtName);
+      return null;
+    }
+    
+    console.log('Returning', districtFeatures.length, 'features for district:', districtName);
     
     return {
       type: 'FeatureCollection',
