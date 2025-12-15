@@ -67,9 +67,9 @@ export interface PotholeReport {
   status: 'new' | 'triaged' | 'assigned' | 'fixed';
   reporter_id?: string;
   reporter_phone?: string | null;
-  district: string | null;
-  mandal: string | null;
-  subDistrict?: string | null;
+  district: string;
+  mandal: string;
+  subDistrict?: string;
   location?: string;
   address?: string | null;
   roadName?: string | null;
