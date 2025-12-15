@@ -2,54 +2,35 @@
 
 import React, { useState, useMemo } from 'react';
 import { PotholeReport } from '@/types/PotholeReport';
+import { useGeographic } from '@/contexts/GeographicContext';
 import Legend from './Legend';
 
 interface SidebarProps {
   reports: PotholeReport[];
   onFilterChange: (filters: { district: string | null; mandal: string | null }) => void;
+  showReportsSidebar?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange, showReportsSidebar = false }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedMandal, setSelectedMandal] = useState<string>('');
+  
+  const { districts, getMandalsForSelectedDistrict, isLoading, error } = useGeographic();
 
-  // Extract unique districts from reports
-  const districts = useMemo(() => {
-    const districtSet = new Set<string>();
-    reports.forEach(report => {
-      if (report.district && report.district.trim()) {
-        districtSet.add(report.district.trim());
-      }
-    });
-    return Array.from(districtSet).sort();
-  }, [reports]);
-
-  // Extract unique mandals from reports (for selected district or all)
+  // Get available mandals for the selected district
   const availableMandals = useMemo(() => {
-    const mandalSet = new Set<string>();
-    reports.forEach(report => {
-      const mandal = report.mandal || report.subDistrict;
-      // If a district is selected, only show mandals from that district
-      if (selectedDistrict) {
-        if (report.district === selectedDistrict && mandal && mandal.trim()) {
-          mandalSet.add(mandal.trim());
-        }
-      } else {
-        // Show all mandals if no district selected
-        if (mandal && mandal.trim()) {
-          mandalSet.add(mandal.trim());
-        }
-      }
-    });
-    return Array.from(mandalSet).sort();
-  }, [reports, selectedDistrict]);
+    if (!selectedDistrict) {
+      return [];
+    }
+    return getMandalsForSelectedDistrict(selectedDistrict);
+  }, [selectedDistrict, getMandalsForSelectedDistrict]);
 
   const handleDistrictChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const districtValue = event.target.value;
     setSelectedDistrict(districtValue);
     setSelectedMandal(''); // Reset mandal when district changes
-    
+
     onFilterChange({
       district: districtValue || null,
       mandal: null
@@ -59,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
   const handleMandalChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const mandalValue = event.target.value;
     setSelectedMandal(mandalValue);
-    
+
     onFilterChange({
       district: selectedDistrict || null,
       mandal: mandalValue || null
@@ -105,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
               <p className="text-sm text-gray-500 mt-1">Andhra Pradesh</p>
               {(selectedDistrict || selectedMandal) && (
                 <p className="text-xs text-blue-600 mt-2">
-                  {reports.filter(r => 
+                  {reports.filter(r =>
                     (!selectedDistrict || r.district === selectedDistrict) &&
                     (!selectedMandal || r.mandal === selectedMandal || r.subDistrict === selectedMandal)
                   ).length} reports shown
@@ -118,19 +99,25 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
               <label htmlFor="district-select" className="block text-sm font-semibold text-gray-700">
                 Filter by District
               </label>
-              <select
-                id="district-select"
-                value={selectedDistrict}
-                onChange={handleDistrictChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
-              >
-                <option value="">All Districts ({districts.length} districts)</option>
-                {districts.map((district) => (
-                  <option key={district} value={district}>
-                    {district} ({reports.filter(r => r.district === district).length})
-                  </option>
-                ))}
-              </select>
+              {isLoading ? (
+                <div className="text-sm text-gray-500">Loading districts...</div>
+              ) : error ? (
+                <div className="text-sm text-red-500">Error loading districts</div>
+              ) : (
+                <select
+                  id="district-select"
+                  value={selectedDistrict}
+                  onChange={handleDistrictChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
+                >
+                  <option value="">All Districts ({districts.length} districts)</option>
+                  {districts.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Mandal/Sub-district Selection */}
@@ -142,25 +129,19 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange }) => {
                 id="mandal-select"
                 value={selectedMandal}
                 onChange={handleMandalChange}
-                disabled={!selectedDistrict && availableMandals.length === 0}
+                disabled={!selectedDistrict || availableMandals.length === 0}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">
-                  {selectedDistrict 
-                    ? `All Mandals in ${selectedDistrict} (${availableMandals.length})` 
-                    : `All Mandals (${availableMandals.length})`}
+                  {selectedDistrict
+                    ? `All Mandals in ${selectedDistrict} (${availableMandals.length})`
+                    : `Select a district first`}
                 </option>
-                {availableMandals.map((mandal) => {
-                  const count = reports.filter(r => 
-                    (r.mandal === mandal || r.subDistrict === mandal) &&
-                    (!selectedDistrict || r.district === selectedDistrict)
-                  ).length;
-                  return (
-                    <option key={mandal} value={mandal}>
-                      {mandal} ({count})
-                    </option>
-                  );
-                })}
+                {availableMandals.map((mandal) => (
+                  <option key={mandal} value={mandal}>
+                    {mandal}
+                  </option>
+                ))}
               </select>
             </div>
 

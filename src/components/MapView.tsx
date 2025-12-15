@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
+import { useGeographic } from '@/contexts/GeographicContext';
 import ClusterMarker from './ClusterMarker';
 import PotholeMarker from './PotholeMarker';
 import ReportCard from './ReportCard';
@@ -12,6 +13,8 @@ import ClusterListView from './ClusterListView';
 interface MapViewProps {
   reports: PotholeReport[];
   filters?: { district: string | null; mandal: string | null };
+  selectedDistrict?: string | null;
+  selectedMandal?: string | null;
 }
 
 const mapContainerStyle = {
@@ -32,11 +35,19 @@ const defaultCenter = {
   lng: 79.7400
 };
 
-const MapView: React.FC<MapViewProps> = ({ reports, filters }) => {
+const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, selectedMandal }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
   });
+
+  const {
+    setHighlightedDistrict,
+    setHighlightedMandal,
+    getDistrictBoundary,
+    getMandalBoundary,
+    getMandalCenter
+  } = useGeographic();
 
   const mapOptions: google.maps.MapOptions = useMemo(() => ({
     disableDefaultUI: false,
@@ -67,6 +78,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters }) => {
   const [clusterReports, setClusterReports] = useState<PotholeReport[] | null>(null);
   const [reportOpenedAtZoom, setReportOpenedAtZoom] = useState<number | null>(null);
   const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [districtDataLayer, setDistrictDataLayer] = useState<google.maps.Data | null>(null);
+  const [mandalDataLayer, setMandalDataLayer] = useState<google.maps.Data | null>(null);
 
   // Auto-fit map to show all filtered reports when filters change
   useEffect(() => {
@@ -75,13 +88,152 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters }) => {
       reports.forEach(report => {
         bounds.extend({ lat: report.lat, lng: report.lng });
       });
-      
+
       // Only fit bounds if we have a valid bounds object
       if (!bounds.isEmpty()) {
         map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 }); // Add padding, extra on left for sidebar
       }
     }
   }, [map, filters]);
+
+  // Handle district and mandal highlighting and scrolling
+  useEffect(() => {
+    if (!map || !window.google) return;
+
+    // Clear existing highlighting
+    setHighlightedDistrict(null);
+    setHighlightedMandal(null);
+    
+    // Clear existing data layers
+    if (districtDataLayer) {
+      districtDataLayer.setMap(null);
+      setDistrictDataLayer(null);
+    }
+    if (mandalDataLayer) {
+      mandalDataLayer.setMap(null);
+      setMandalDataLayer(null);
+    }
+
+    // Handle mandal selection (has priority over district)
+    if (selectedMandal) {
+      setHighlightedMandal(selectedMandal);
+      
+      // Get mandal boundary and center
+      const mandalBoundary = getMandalBoundary(selectedMandal);
+      const mandalCenter = getMandalCenter(selectedMandal);
+      
+      if (mandalBoundary) {
+        try {
+          // Create data layer for mandal
+          const dataLayer = new google.maps.Data();
+          dataLayer.addGeoJson(mandalBoundary);
+          dataLayer.setStyle({
+            fillColor: '#3B82F6',
+            fillOpacity: 0.2,
+            strokeColor: '#1D4ED8',
+            strokeWeight: 3,
+            strokeOpacity: 0.8
+          });
+          dataLayer.setMap(map);
+          setMandalDataLayer(dataLayer);
+        } catch (error) {
+          console.error('Error creating mandal data layer:', error, mandalBoundary);
+        }
+      }
+      
+      if (mandalCenter && typeof mandalCenter.lat === 'number' && typeof mandalCenter.lng === 'number' && !isNaN(mandalCenter.lat) && !isNaN(mandalCenter.lng)) {
+        // Scroll to mandal center only if coordinates are valid
+        map.setCenter(mandalCenter);
+        map.setZoom(12);
+      } else {
+        console.error('Invalid mandal center coordinates for:', selectedMandal, mandalCenter);
+      }
+      
+      // Also highlight the containing district
+      if (selectedDistrict) {
+        setHighlightedDistrict(selectedDistrict);
+        const districtBoundary = getDistrictBoundary(selectedDistrict);
+        if (districtBoundary) {
+          const districtLayer = new google.maps.Data();
+          districtLayer.addGeoJson(districtBoundary);
+          districtLayer.setStyle({
+            fillColor: '#10B981',
+            fillOpacity: 0.1,
+            strokeColor: '#059669',
+            strokeWeight: 2,
+            strokeOpacity: 0.6
+          });
+          districtLayer.setMap(map);
+          setDistrictDataLayer(districtLayer);
+        }
+      }
+    } else if (selectedDistrict) {
+      // Handle district-only selection
+      setHighlightedDistrict(selectedDistrict);
+      
+      const districtBoundary = getDistrictBoundary(selectedDistrict);
+      if (districtBoundary) {
+        try {
+          // Create data layer for district
+          const dataLayer = new google.maps.Data();
+          dataLayer.addGeoJson(districtBoundary);
+          dataLayer.setStyle({
+            fillColor: '#10B981',
+            fillOpacity: 0.2,
+            strokeColor: '#059669',
+            strokeWeight: 3,
+            strokeOpacity: 0.8
+          });
+          dataLayer.setMap(map);
+          setDistrictDataLayer(dataLayer);
+        
+          // Fit map to district bounds
+          const bounds = new google.maps.LatLngBounds();
+          districtBoundary.features.forEach((feature: any) => {
+            if (feature.geometry && feature.geometry.coordinates) {
+              let allCoordinates: [number, number][] = [];
+              
+              // Handle both Polygon and MultiPolygon geometries
+              if (feature.geometry.type === 'MultiPolygon') {
+                feature.geometry.coordinates.forEach((polygon: any) => {
+                  if (polygon[0] && Array.isArray(polygon[0])) {
+                    allCoordinates.push(...polygon[0]);
+                  }
+                });
+              } else if (feature.geometry.type === 'Polygon') {
+                if (feature.geometry.coordinates[0] && Array.isArray(feature.geometry.coordinates[0])) {
+                  allCoordinates = feature.geometry.coordinates[0];
+                }
+              }
+              
+              allCoordinates.forEach((coord: [number, number]) => {
+                if (typeof coord[0] === 'number' && typeof coord[1] === 'number' && 
+                    !isNaN(coord[0]) && !isNaN(coord[1])) {
+                  bounds.extend({ lat: coord[1], lng: coord[0] });
+                }
+              });
+            }
+          });
+          
+          if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 370 });
+          }
+        } catch (error) {
+          console.error('Error creating district data layer:', error, districtBoundary);
+        }
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (districtDataLayer) {
+        districtDataLayer.setMap(null);
+      }
+      if (mandalDataLayer) {
+        mandalDataLayer.setMap(null);
+      }
+    };
+  }, [map, selectedDistrict, selectedMandal, getDistrictBoundary, getMandalBoundary, getMandalCenter, setHighlightedDistrict, setHighlightedMandal]);
 
   // Initialize Supercluster - now using pre-filtered reports from Dashboard
   const supercluster = useMemo(() => {

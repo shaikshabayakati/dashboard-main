@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PotholeReport } from '@/types/PotholeReport';
+import { useGeographic } from '@/contexts/GeographicContext';
 import ReportCard from './ReportCard';
 import { X, Filter } from 'lucide-react';
 
@@ -23,6 +24,25 @@ const DistrictReportsSidebar: React.FC<DistrictReportsSidebarProps> = ({
 }) => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
+  
+  const { setHighlightedDistrict, setHighlightedMandal } = useGeographic();
+
+  // Set highlighting when sidebar opens
+  useEffect(() => {
+    if (mandalName) {
+      setHighlightedMandal(mandalName);
+      setHighlightedDistrict(districtName); // Also highlight the containing district
+    } else {
+      setHighlightedDistrict(districtName);
+      setHighlightedMandal(null);
+    }
+
+    // Cleanup highlighting when sidebar closes
+    return () => {
+      setHighlightedDistrict(null);
+      setHighlightedMandal(null);
+    };
+  }, [districtName, mandalName, setHighlightedDistrict, setHighlightedMandal]);
 
   // Filter and sort reports
   const filteredAndSortedReports = useMemo(() => {

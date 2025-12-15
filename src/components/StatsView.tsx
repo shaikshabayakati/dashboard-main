@@ -2,14 +2,18 @@
 
 import React, { useState, useMemo } from 'react';
 import { usePotholeReports } from '@/hooks/usePotholeReports';
+import { useGeographic } from '@/contexts/GeographicContext';
 import { PotholeReport } from '@/types/PotholeReport';
 
 export default function StatsView() {
   const { reports, isLoading, error } = usePotholeReports();
+  const { districts, getMandalsForSelectedDistrict, filterReportsByLocation } = useGeographic();
 
   // Filter states
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('');
+  const [districtFilter, setDistrictFilter] = useState<string>('');
+  const [mandalFilter, setMandalFilter] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'severity' | 'impact'>('recent');
@@ -17,6 +21,12 @@ export default function StatsView() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Get available mandals for selected district
+  const availableMandals = useMemo(() => {
+    if (!districtFilter) return [];
+    return getMandalsForSelectedDistrict(districtFilter);
+  }, [districtFilter, getMandalsForSelectedDistrict]);
 
   // Calculate geographic statistics
   const stats = useMemo(() => {
@@ -54,20 +64,19 @@ export default function StatsView() {
 
   // Filter and sort reports
   const filteredReports = useMemo(() => {
-    let filtered = [...reports];
+    // First apply geographic filtering
+    let filtered = filterReportsByLocation(reports, districtFilter || null, mandalFilter || null);
 
     // Severity filter
     if (severityFilter !== 'all') {
       filtered = filtered.filter(r => r.severityLabel === severityFilter);
     }
 
-    // Location filter
+    // Location text filter
     if (locationFilter) {
       filtered = filtered.filter(r =>
         r.address?.toLowerCase().includes(locationFilter.toLowerCase()) ||
-        r.roadName?.toLowerCase().includes(locationFilter.toLowerCase()) ||
-        r.district?.toLowerCase().includes(locationFilter.toLowerCase()) ||
-        r.mandal?.toLowerCase().includes(locationFilter.toLowerCase())
+        r.roadName?.toLowerCase().includes(locationFilter.toLowerCase())
       );
     }
 
@@ -93,7 +102,7 @@ export default function StatsView() {
     });
 
     return filtered;
-  }, [reports, severityFilter, locationFilter, startDate, endDate, sortBy]);
+  }, [reports, filterReportsByLocation, districtFilter, mandalFilter, severityFilter, locationFilter, startDate, endDate, sortBy]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -157,16 +166,51 @@ export default function StatsView() {
             <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Location</label>
             <input
               type="text"
-              placeholder="Search..."
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-            />
-          </div>
+                placeholder="Search address/road name..."
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+              />
+            </div>
 
-          {/* Start Date */}
-          <div>
-            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Start Date</label>
+            {/* District Filter */}
+            <div>
+              <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>District</label>
+              <select
+                value={districtFilter}
+                onChange={(e) => {
+                  setDistrictFilter(e.target.value);
+                  setMandalFilter(''); // Reset mandal when district changes
+                }}
+                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+              >
+                <option value="">All Districts</option>
+                {districts.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Mandal Filter */}
+            <div>
+              <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Mandal</label>
+              <select
+                value={mandalFilter}
+                onChange={(e) => setMandalFilter(e.target.value)}
+                disabled={!districtFilter || availableMandals.length === 0}
+                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <option value="">
+                  {districtFilter ? `All Mandals in ${districtFilter}` : 'Select district first'}
+                </option>
+                {availableMandals.map((mandal) => (
+                  <option key={mandal} value={mandal}>
+                    {mandal}
+                  </option>
+                ))}
+              </select>
             <input
               type="date"
               value={startDate}
@@ -221,11 +265,13 @@ export default function StatsView() {
           </div>
 
           {/* Clear Filters */}
-          {(severityFilter !== 'all' || locationFilter || startDate || endDate) && (
+          {(severityFilter !== 'all' || locationFilter || districtFilter || mandalFilter || startDate || endDate) && (
             <button
               onClick={() => {
                 setSeverityFilter('all');
                 setLocationFilter('');
+                setDistrictFilter('');
+                setMandalFilter('');
                 setStartDate('');
                 setEndDate('');
               }}

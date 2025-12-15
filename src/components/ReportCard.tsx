@@ -16,14 +16,23 @@ interface ReportCardProps {
   report: PotholeReport;
   onClose?: () => void;
   isExpanded?: boolean;
+  onImageClick?: (imageUrl: string) => void;
 }
 
-const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = false }) => {
+const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = false, onImageClick }) => {
   // Use severityLabel from database directly - no numeric fallback
   const severityColor = getSeverityColor(report.severityLabel);
   const severityLabel = getSeverityLabel(report.severityLabel);
   const [address, setAddress] = useState<string>('Loading address...');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  const handleImageClick = () => {
+    if (onImageClick && report.imageUrl) {
+      onImageClick(report.imageUrl);
+    } else {
+      setIsImageModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     // Priority: 1. Database address, 2. location field, 3. Fetch from coordinates
@@ -74,7 +83,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
           onClick={(e) => {
             e.stopPropagation();
             console.log('Image clicked, opening modal');
-            setIsImageModalOpen(true);
+            handleImageClick();
           }}
         >
           <img
