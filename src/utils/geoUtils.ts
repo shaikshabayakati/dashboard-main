@@ -2,6 +2,28 @@
  * Utility functions for geographic operations including point-in-polygon checks
  */
 
+// Mapping from old district names (used in mandal dtname) to new district names (used in district NAME)
+const OLD_TO_NEW_DISTRICT_NAMES: { [key: string]: string } = {
+  'Anantapur': 'Ananthapuram',
+  'Sri Potti Sriramulu Nellore': 'sri potti sriramulu Nellore',
+  'Y.S.R.': 'YSR Kadapa',
+  'East Godavari': 'East Godavari',
+  'West Godavari': 'West Godavari',
+  'Srikakulam': 'Srikakulam',
+  'Vizianagaram': 'Vizianagaram',
+  'Visakhapatnam': 'Visakhapatnam',
+  'Krishna': 'Krishna',
+  'Guntur': 'Guntur',
+  'Prakasam': 'Prakasam',
+  'Kurnool': 'Kurnool',
+  'Chittoor': 'Chittoor'
+};
+
+// Reverse mapping from new to old district names
+const NEW_TO_OLD_DISTRICT_NAMES: { [key: string]: string } = Object.fromEntries(
+  Object.entries(OLD_TO_NEW_DISTRICT_NAMES).map(([old, new_]) => [new_, old])
+);
+
 export interface GeoJSONFeature {
   type: 'Feature';
   id?: string | number;
@@ -117,14 +139,27 @@ export function findContainingFeature(
  * Get district name from a GeoJSON feature
  */
 export function getDistrictName(feature: GeoJSONFeature): string | null {
-  return feature.properties?.dtname || null;
+  // For new district-level features, use NAME field
+  if (feature.properties?.boundary_level === 'district' && feature.properties?.NAME) {
+    return feature.properties.NAME;
+  }
+  // For old sub-district features, use dtname field and map it to new name
+  if (feature.properties?.dtname) {
+    const oldName = feature.properties.dtname;
+    return OLD_TO_NEW_DISTRICT_NAMES[oldName] || oldName;
+  }
+  return null;
 }
 
 /**
  * Get mandal/sub-district name from a GeoJSON feature
  */
 export function getMandalName(feature: GeoJSONFeature): string | null {
-  return feature.properties?.sdtname || null;
+  // Only sub-district features have mandal names
+  if (feature.properties?.sdtname) {
+    return feature.properties.sdtname;
+  }
+  return null;
 }
 
 /**
@@ -153,6 +188,7 @@ export function getDistrictsFromGeoJSON(geoJsonData: GeoJSONFeatureCollection): 
   const districts = new Set<string>();
   
   geoJsonData.features.forEach(feature => {
+    // Get districts from both district-level and sub-district-level features
     const district = getDistrictName(feature);
     if (district) {
       districts.add(district);
@@ -171,8 +207,14 @@ export function getMandalsForDistrict(
 ): string[] {
   const mandals = new Set<string>();
   
+  // Get the old district name to match against dtname field
+  const oldDistrictName = NEW_TO_OLD_DISTRICT_NAMES[districtName] || districtName;
+  
   geoJsonData.features
-    .filter(feature => getDistrictName(feature) === districtName)
+    .filter(feature => {
+      // Only look at sub-district features that have mandal data
+      return feature.properties?.dtname === oldDistrictName && feature.properties?.sdtname;
+    })
     .forEach(feature => {
       const mandal = getMandalName(feature);
       if (mandal) {

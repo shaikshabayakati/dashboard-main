@@ -212,7 +212,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
               </div>
             </div>
             <span className="text-gray-600 text-right font-semibold">
-              {(report.impactScore * 100).toFixed(1)}%
+              {report.impactScore}
             </span>
           </div>
         )}

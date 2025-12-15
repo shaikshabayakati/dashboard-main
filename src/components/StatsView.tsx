@@ -211,6 +211,11 @@ export default function StatsView() {
                   </option>
                 ))}
               </select>
+            </div>
+
+          {/* Start Date */}
+          <div>
+            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Start Date</label>
             <input
               type="date"
               value={startDate}
