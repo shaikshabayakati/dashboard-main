@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange, showReportsS
                   onChange={handleDistrictChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 text-sm"
                 >
-                  <option value="">All Districts ({districts.length} districts)</option>
+                  <option value="">All Districts</option>
                   {districts.map((district) => (
                     <option key={district} value={district}>
                       {district}
@@ -134,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange, showReportsS
               >
                 <option value="">
                   {selectedDistrict
-                    ? `All Mandals in ${selectedDistrict} (${availableMandals.length})`
+                    ? `All Mandals in ${selectedDistrict}`
                     : `Select a district first`}
                 </option>
                 {availableMandals.map((mandal) => (

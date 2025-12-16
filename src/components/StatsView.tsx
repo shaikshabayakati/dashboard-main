@@ -191,7 +191,7 @@ export default function StatsView() {
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Severity Filter */}
           <div>
-            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Severity</label>
+            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Pothole Severity</label>
             <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
@@ -414,7 +414,7 @@ export default function StatsView() {
                               {tooltipVisible === 'impact' && (
                                 <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-72 ${isDarkMode ? 'bg-gray-900 text-gray-200 border-gray-700' : 'bg-white text-gray-800 border-gray-300'} border rounded-lg p-3 shadow-xl z-[9999] text-xs font-normal normal-case leading-relaxed`}>
                                   <div className="font-semibold mb-1">Traffic-Weighted Impact Analysis</div>
-                                  <div>Comprehensive scoring algorithm that integrates real-time traffic density, historical traffic patterns, road usage analytics, and infrastructural importance to quantify the potential disruption and safety implications of each pothole location.</div>
+                                  <div>The impact score is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.</div>
                                   <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 ${isDarkMode ? 'border-l-transparent border-r-transparent border-b-gray-900' : 'border-l-transparent border-r-transparent border-b-white'}`}></div>
                                 </div>
                               )}
@@ -510,16 +510,13 @@ export default function StatsView() {
                                     <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Full Address:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.address || 'N/A'}</p>
                                   </div>
-                                  <div>
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Coordinates:</span>
-                                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.lat.toFixed(6)}, {report.lng.toFixed(6)}</p>
-                                  </div>
+                                
                                   <div>
                                     <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Name:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadName || 'N/A'}</p>
                                   </div>
                                   <div>
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Detection Count:</span>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Potholes Detected:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.detectionCount || 0}</p>
                                   </div>
                                   <div>
