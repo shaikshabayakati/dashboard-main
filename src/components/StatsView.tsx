@@ -16,11 +16,17 @@ export default function StatsView() {
   const [mandalFilter, setMandalFilter] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'recent' | 'severity' | 'impact'>('recent');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Sort states
+  type SortColumn = 'datetime' | 'severity' | 'impact';
+  type SortOrder = 'asc' | 'desc';
+  const [sortColumn, setSortColumn] = useState<SortColumn>('datetime');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc'); // Default: newest first
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [tooltipVisible, setTooltipVisible] = useState<string | null>(null);
 
   // Get available mandals for selected district
   const availableMandals = useMemo(() => {
@@ -92,17 +98,25 @@ export default function StatsView() {
 
     // Sort
     filtered.sort((a, b) => {
-      if (sortBy === 'recent') {
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      } else if (sortBy === 'severity') {
-        return (b.severity || 0) - (a.severity || 0);
-      } else {
-        return (b.impactScore || 0) - (a.impactScore || 0);
+      let comparison = 0;
+
+      if (sortColumn === 'datetime') {
+        comparison = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      } else if (sortColumn === 'severity') {
+        // Custom severity ordering: low < medium < high
+        const severityOrder = { low: 1, medium: 2, high: 3 };
+        const aSeverity = severityOrder[a.severityLabel as keyof typeof severityOrder] || 0;
+        const bSeverity = severityOrder[b.severityLabel as keyof typeof severityOrder] || 0;
+        comparison = aSeverity - bSeverity;
+      } else if (sortColumn === 'impact') {
+        comparison = (a.impactScore || 0) - (b.impactScore || 0);
       }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return filtered;
-  }, [reports, filterReportsByLocation, districtFilter, mandalFilter, severityFilter, locationFilter, startDate, endDate, sortBy]);
+  }, [reports, filterReportsByLocation, districtFilter, mandalFilter, severityFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -111,6 +125,35 @@ export default function StatsView() {
       case 'high': return 'text-red-400 bg-red-400/10 border-red-400/20';
       default: return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
     }
+  };
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortOrder('desc'); // Default to desc for new column
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className={`w-4 h-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+        </svg>
+      );
+    }
+
+    return sortOrder === 'asc' ? (
+      <svg className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className={`w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
   };
 
   if (isLoading) {
@@ -166,52 +209,52 @@ export default function StatsView() {
             <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Location</label>
             <input
               type="text"
-                placeholder="Search address/road name..."
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-              />
-            </div>
+              placeholder="Search address/road name..."
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+            />
+          </div>
 
-            {/* District Filter */}
-            <div>
-              <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>District</label>
-              <select
-                value={districtFilter}
-                onChange={(e) => {
-                  setDistrictFilter(e.target.value);
-                  setMandalFilter(''); // Reset mandal when district changes
-                }}
-                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-              >
-                <option value="">All Districts</option>
-                {districts.map((district) => (
-                  <option key={district} value={district}>
-                    {district}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Mandal Filter */}
-            <div>
-              <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Mandal</label>
-              <select
-                value={mandalFilter}
-                onChange={(e) => setMandalFilter(e.target.value)}
-                disabled={!districtFilter || availableMandals.length === 0}
-                className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <option value="">
-                  {districtFilter ? `All Mandals in ${districtFilter}` : 'Select district first'}
+          {/* District Filter */}
+          <div>
+            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>District</label>
+            <select
+              value={districtFilter}
+              onChange={(e) => {
+                setDistrictFilter(e.target.value);
+                setMandalFilter(''); // Reset mandal when district changes
+              }}
+              className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+            >
+              <option value="">All Districts</option>
+              {districts.map((district) => (
+                <option key={district} value={district}>
+                  {district}
                 </option>
-                {availableMandals.map((mandal) => (
-                  <option key={mandal} value={mandal}>
-                    {mandal}
-                  </option>
-                ))}
-              </select>
-            </div>
+              ))}
+            </select>
+          </div>
+
+          {/* Mandal Filter */}
+          <div>
+            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Mandal</label>
+            <select
+              value={mandalFilter}
+              onChange={(e) => setMandalFilter(e.target.value)}
+              disabled={!districtFilter || availableMandals.length === 0}
+              className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <option value="">
+                {districtFilter ? `All Mandals in ${districtFilter}` : 'Select district first'}
+              </option>
+              {availableMandals.map((mandal) => (
+                <option key={mandal} value={mandal}>
+                  {mandal}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Start Date */}
           <div>
@@ -235,39 +278,7 @@ export default function StatsView() {
             />
           </div>
 
-          {/* Sort By */}
-          <div>
-            <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Sort By</label>
-            <div className="space-y-2">
-              <button
-                onClick={() => setSortBy('recent')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'recent'
-                  ? 'bg-purple-500 text-white'
-                  : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                Most Recent
-              </button>
-              <button
-                onClick={() => setSortBy('severity')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'severity'
-                  ? 'bg-purple-500 text-white'
-                  : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                Severity
-              </button>
-              <button
-                onClick={() => setSortBy('impact')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'impact'
-                  ? 'bg-purple-500 text-white'
-                  : isDarkMode ? 'bg-[#1a1b23] text-gray-400 hover:bg-gray-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                Impact Score
-              </button>
-            </div>
-          </div>
+
 
           {/* Clear Filters */}
           {(severityFilter !== 'all' || locationFilter || districtFilter || mandalFilter || startDate || endDate) && (
@@ -344,17 +355,73 @@ export default function StatsView() {
                       <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
                         ID
                       </th>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                        Date & Time
+                      <th
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        onClick={() => handleSort('datetime')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Date & Time
+                          {getSortIcon('datetime')}
+                        </div>
                       </th>
                       <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
                         Location
                       </th>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                        Severity
+                      <th
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        onClick={() => handleSort('severity')}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            Severity
+                            <div 
+                              className="relative"
+                              onMouseEnter={() => setTooltipVisible('severity')}
+                              onMouseLeave={() => setTooltipVisible(null)}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <svg className={`w-3 h-3 ${isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} cursor-help transition-colors`} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                              </svg>
+                              {tooltipVisible === 'severity' && (
+                                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-72 ${isDarkMode ? 'bg-gray-900 text-gray-200 border-gray-700' : 'bg-white text-gray-800 border-gray-300'} border rounded-lg p-3 shadow-xl z-[9999] text-xs font-normal normal-case leading-relaxed`}>
+                                  <div className="font-semibold mb-1">AI-Powered Severity Assessment</div>
+                                  <div>Our AI model analyzes visual characteristics of pothole damage including depth, surface area, edge definition, and structural impact to classify severity into Low, Medium, or High categories with precise confidence scoring.</div>
+                                  <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 ${isDarkMode ? 'border-l-transparent border-r-transparent border-b-gray-900' : 'border-l-transparent border-r-transparent border-b-white'}`}></div>
+                                </div>
+                              )}
+                            </div>
+                          </span>
+                          {getSortIcon('severity')}
+                        </div>
                       </th>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                        Impact Score
+                      <th
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        onClick={() => handleSort('impact')}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            Impact Score
+                            <div 
+                              className="relative"
+                              onMouseEnter={() => setTooltipVisible('impact')}
+                              onMouseLeave={() => setTooltipVisible(null)}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <svg className={`w-3 h-3 ${isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} cursor-help transition-colors`} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                              </svg>
+                              {tooltipVisible === 'impact' && (
+                                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-72 ${isDarkMode ? 'bg-gray-900 text-gray-200 border-gray-700' : 'bg-white text-gray-800 border-gray-300'} border rounded-lg p-3 shadow-xl z-[9999] text-xs font-normal normal-case leading-relaxed`}>
+                                  <div className="font-semibold mb-1">Traffic-Weighted Impact Analysis</div>
+                                  <div>Comprehensive scoring algorithm that integrates real-time traffic density, historical traffic patterns, road usage analytics, and infrastructural importance to quantify the potential disruption and safety implications of each pothole location.</div>
+                                  <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 ${isDarkMode ? 'border-l-transparent border-r-transparent border-b-gray-900' : 'border-l-transparent border-r-transparent border-b-white'}`}></div>
+                                </div>
+                              )}
+                            </div>
+                          </span>
+                          {getSortIcon('impact')}
+                        </div>
                       </th>
                       <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
                         Status
@@ -473,7 +540,7 @@ export default function StatsView() {
                                   )}
                                   {report.images && report.images.length > 0 && (
                                     <div className="col-span-full">
-                                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Images:</span>
+                                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Citizen Uploaded Image:</span>
                                       <div className="flex gap-2 mt-2 flex-wrap">
                                         {report.images.map((img, idx) => (
                                           <img

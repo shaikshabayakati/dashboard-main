@@ -90,23 +90,23 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
     <>
       <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex-1">
             <div className="flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-bold text-gray-900">
+              <MapPin className="w-4 h-4 text-blue-600" />
+              <h2 className="text-base font-bold text-gray-900">
                 {mandalName || districtName || 'Selected Area'}
               </h2>
             </div>
             {mandalName && districtName && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 {districtName} District
               </p>
             )}
-            <div className="flex items-center space-x-4 mt-2">
+            <div className="flex items-center space-x-4 mt-1">
               <div className="flex items-center space-x-1">
-                <AlertTriangle className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">
+                <AlertTriangle className="w-3 h-3 text-gray-500" />
+                <span className="text-xs font-medium text-gray-700">
                   {filteredAndSortedReports.length} of {reports.length} Reports
                 </span>
               </div>
@@ -114,98 +114,32 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+            className="p-1.5 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
             aria-label="Close sidebar"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-4 h-4 text-gray-600" />
           </button>
         </div>
 
-        {/* Severity Overview */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-              <div className="text-2xl font-bold text-red-600">{severityCounts.high}</div>
-              <div className="text-xs text-gray-500">High</div>
-            </div>
-            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-              <div className="text-2xl font-bold text-yellow-600">{severityCounts.medium}</div>
-              <div className="text-xs text-gray-500">Medium</div>
-            </div>
-            <div className="text-center bg-white rounded-lg p-3 shadow-sm">
-              <div className="text-2xl font-bold text-green-600">{severityCounts.low}</div>
-              <div className="text-xs text-gray-500">Low</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Filters Section */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50 space-y-3">
-          {/* Sort By */}
+
+        {/* Enhanced Filters Section */}
+        <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
           <div>
-            <label className="flex items-center text-xs font-semibold text-gray-700 mb-2">
-              <Filter className="w-3 h-3 mr-1" />
-              Sort By
+            <label className="flex items-center text-xs font-medium text-gray-700 mb-2">
+              <Filter className="w-3 h-3 mr-1 text-blue-600" />
+              Sort & Filter
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-all duration-200"
             >
-              <option value="recent">Most Recent</option>
-              <option value="oldest">Oldest First</option>
-              <option value="severity-high">Severity (High to Low)</option>
-              <option value="severity-low">Severity (Low to High)</option>
+              <option value="recent">📅 Most Recent</option>
+              <option value="oldest">⏰ Oldest First</option>
+              <option value="severity-high">🔴 Severity (High to Low)</option>
+              <option value="severity-low">🟢 Severity (Low to High)</option>
             </select>
-          </div>
-
-          {/* Severity Filter */}
-          <div>
-            <label className="text-xs font-semibold text-gray-700 mb-2 block">
-              Filter by Severity
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSeverityFilter('all')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  severityFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setSeverityFilter('high')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  severityFilter === 'high'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                High
-              </button>
-              <button
-                onClick={() => setSeverityFilter('medium')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  severityFilter === 'medium'
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Medium
-              </button>
-              <button
-                onClick={() => setSeverityFilter('low')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  severityFilter === 'low'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Low
-              </button>
-            </div>
           </div>
         </div>
 
@@ -239,6 +173,34 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Quick Stats at Bottom */}
+        <div className="p-3 bg-gray-50 border-t border-gray-200">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-gray-600 font-medium">Quick Stats:</span>
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span className="text-red-600 font-semibold">{severityCounts.high}</span>
+                <span className="text-gray-500">H</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span className="text-yellow-600 font-semibold">{severityCounts.medium}</span>
+                <span className="text-gray-500">M</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-green-600 font-semibold">{severityCounts.low}</span>
+                <span className="text-gray-500">L</span>
+              </div>
+              <div className="border-l border-gray-300 pl-3 ml-1">
+                <span className="text-gray-700 font-semibold">{reports.length}</span>
+                <span className="text-gray-500">Total</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

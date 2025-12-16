@@ -4,7 +4,7 @@
 
 // Mapping from old district names (used in mandal dtname) to new district names (used in district NAME)
 const OLD_TO_NEW_DISTRICT_NAMES: { [key: string]: string } = {
-  'Anantapur': 'Ananthapuram',
+  'Anantapur': 'Anantapur',
   'Sri Potti Sriramulu Nellore': 'sri potti sriramulu Nellore',
   'Y.S.R.': 'YSR Kadapa',
   'East Godavari': 'East Godavari',
