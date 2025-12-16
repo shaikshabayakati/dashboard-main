@@ -352,11 +352,11 @@ export default function StatsView() {
                 <table className="w-full">
                   <thead className={`${isDarkMode ? 'bg-[#1a1b23] border-gray-800' : 'bg-gray-50 border-gray-200'} border-b`}>
                     <tr>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[8%]`}>
                         ID
                       </th>
                       <th
-                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors w-[18%]`}
                         onClick={() => handleSort('datetime')}
                       >
                         <div className="flex items-center gap-2">
@@ -364,17 +364,17 @@ export default function StatsView() {
                           {getSortIcon('datetime')}
                         </div>
                       </th>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[40%]`}>
                         Location
                       </th>
                       <th
-                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors w-[14%]`}
                         onClick={() => handleSort('severity')}
                       >
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1">
                             Severity
-                            <div 
+                            <div
                               className="relative"
                               onMouseEnter={() => setTooltipVisible('severity')}
                               onMouseLeave={() => setTooltipVisible(null)}
@@ -396,13 +396,13 @@ export default function StatsView() {
                         </div>
                       </th>
                       <th
-                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors`}
+                        className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors w-[15%]`}
                         onClick={() => handleSort('impact')}
                       >
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1">
                             Impact Score
-                            <div 
+                            <div
                               className="relative"
                               onMouseEnter={() => setTooltipVisible('impact')}
                               onMouseLeave={() => setTooltipVisible(null)}
@@ -423,16 +423,13 @@ export default function StatsView() {
                           {getSortIcon('impact')}
                         </div>
                       </th>
-                      <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase`}>
-                        Status
-                      </th>
-                      <th className="px-4 py-3"></th>
+                      <th className="px-4 py-3 w-[5%]"></th>
                     </tr>
                   </thead>
                   <tbody className={`${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'} divide-y`}>
                     {filteredReports.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
+                        <td colSpan={6} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
                           No reports found matching the filters
                         </td>
                       </tr>
@@ -478,11 +475,7 @@ export default function StatsView() {
                                 {report.impactScore ? report.impactScore.toFixed(1) : 'N/A'}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-400/10 text-blue-500 border border-blue-400/20">
-                                {report.status || 'Pending'}
-                              </span>
-                            </td>
+
                             <td className="px-4 py-4 text-right">
                               <svg
                                 className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} transition-transform ${expandedRow === report.id ? 'rotate-180' : ''}`}
@@ -496,7 +489,7 @@ export default function StatsView() {
                           </tr>
                           {expandedRow === report.id && (
                             <tr>
-                              <td colSpan={7} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
+                              <td colSpan={6} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-base">
                                   <div>
                                     <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>District:</span>
@@ -510,7 +503,7 @@ export default function StatsView() {
                                     <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Full Address:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.address || 'N/A'}</p>
                                   </div>
-                                
+
                                   <div>
                                     <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Road Name:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.roadName || 'N/A'}</p>
@@ -520,7 +513,7 @@ export default function StatsView() {
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.detectionCount || 0}</p>
                                   </div>
                                   <div>
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Severity Score:</span>
+                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Confidence Score:</span>
                                     <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{report.severity ? (report.severity * 100).toFixed(1) + '%' : 'N/A'}</p>
                                   </div>
                                   {report.roadOwnership && (
