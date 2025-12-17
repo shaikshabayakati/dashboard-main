@@ -425,7 +425,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
   return (
     <div className="relative w-full h-full">
       {/* Custom Heatmap Toggle Button - Standard Google Maps Control styling */}
-      <div className="absolute top-[10px] right-[60px] z-[5] flex items-center bg-white rounded-sm shadow-[0_1px_4px_rgba(0,0,0,0.3)] h-10 cursor-pointer transition-colors user-select-none">
+      <div className="absolute top-[10px] right-[10px] z-[5] flex items-center bg-white rounded-sm shadow-[0_1px_4px_rgba(0,0,0,0.3)] h-10 cursor-pointer transition-colors user-select-none">
         <button
           onClick={() => setIsHeatmapMode(!isHeatmapMode)}
           className={`px-4 h-full text-sm font-medium ${isHeatmapMode ? 'text-blue-600 hover:bg-gray-50' : 'text-gray-600 hover:text-black hover:bg-gray-50'}`}
