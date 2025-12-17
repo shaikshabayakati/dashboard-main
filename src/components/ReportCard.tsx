@@ -27,8 +27,8 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleImageClick = () => {
-    if (onImageClick && report.imageUrl) {
-      onImageClick(report.imageUrl);
+    if (onImageClick && report.images && report.images.length > 0) {
+      onImageClick(report.images[0]);
     } else {
       setIsImageModalOpen(true);
     }
@@ -114,7 +114,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        
+
         {/* Location */}
         <div className="flex items-start justify-between text-sm">
           <span className="font-medium text-gray-700">📍 Location</span>
@@ -123,7 +123,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
           </span>
         </div>
 
-        {/* Road Information */}
+        {/* Road Information
         {(report.roadName || report.roadNameFromGeoJson) && (
           <div className="flex items-start justify-between text-sm">
             <span className="font-medium text-gray-700">🛣️ Road</span>
@@ -136,7 +136,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
               )}
             </span>
           </div>
-        )}
+        )} */}
 
         {/* Road Ownership */}
         {report.roadOwnership && report.roadOwnership !== 'Unknown' && (
