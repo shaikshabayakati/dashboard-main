@@ -396,8 +396,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         const point = projection.fromLatLngToPoint(new google.maps.LatLng(report.lat, report.lng));
         if (point) {
           const scale = Math.pow(2, map.getZoom() || 12);
-          // Offset by ~200 pixels worth of latitude (card height + margin)
-          const offsetY = 200 / scale;
+          // Offset by ~350 pixels worth of latitude (card height + margin)
+          const offsetY = 350 / scale;
           const newPoint = new google.maps.Point(point.x, point.y - offsetY);
           const newLatLng = projection.fromPointToLatLng(newPoint);
           if (newLatLng) {
