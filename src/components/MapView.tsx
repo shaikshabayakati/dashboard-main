@@ -112,10 +112,15 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
   }), []);
 
   const [isHeatmapMode, setIsHeatmapMode] = useState(false);
+  
+  // Track last applied district/mandal to prevent unnecessary map updates
+  const lastAppliedDistrict = useRef<string | null>(null);
+  const lastAppliedMandal = useRef<string | null>(null);
+  const mapInitialized = useRef(false);
 
-  // Auto-fit map to show all filtered reports when filters change
+  // Auto-fit map to show all filtered reports when filters change (only on initial load)
   useEffect(() => {
-    if (map && reports.length > 0) {
+    if (map && reports.length > 0 && !mapInitialized.current) {
       const bounds = new google.maps.LatLngBounds();
       reports.forEach(report => {
         bounds.extend({ lat: report.lat, lng: report.lng });
@@ -124,13 +129,26 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
       // Only fit bounds if we have a valid bounds object
       if (!bounds.isEmpty()) {
         map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 }); // Add padding, extra on left for sidebar
+        mapInitialized.current = true;
       }
     }
-  }, [map, filters]);
+  }, [map, reports]);
 
-  // Handle district and mandal highlighting and scrolling
+  // Handle district and mandal highlighting and scrolling - only when selection actually changes
   useEffect(() => {
     if (!map || !window.google) return;
+
+    // Check if district/mandal selection actually changed
+    const districtChanged = selectedDistrict !== lastAppliedDistrict.current;
+    const mandalChanged = selectedMandal !== lastAppliedMandal.current;
+    
+    if (!districtChanged && !mandalChanged) {
+      return; // No change, don't update map
+    }
+
+    // Update tracking refs
+    lastAppliedDistrict.current = selectedDistrict || null;
+    lastAppliedMandal.current = selectedMandal || null;
 
     // Clear existing highlighting
     setHighlightedDistrict(null);
@@ -265,7 +283,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         mandalDataLayer.setMap(null);
       }
     };
-  }, [map, selectedDistrict, selectedMandal, getDistrictBoundary, getMandalBoundary, getMandalCenter, setHighlightedDistrict, setHighlightedMandal]);
+  }, [map, selectedDistrict, selectedMandal, getDistrictBoundary, getMandalBoundary, getMandalCenter]);
 
   // Initialize Supercluster - now using pre-filtered reports from Dashboard
   const supercluster = useMemo(() => {

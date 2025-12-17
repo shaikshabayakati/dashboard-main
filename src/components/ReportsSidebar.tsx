@@ -30,7 +30,7 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
   
   const { setHighlightedDistrict, setHighlightedMandal } = useGeographic();
 
-  // Set highlighting when sidebar opens
+  // Set highlighting when sidebar opens - maintain highlighting when closed
   useEffect(() => {
     if (isVisible) {
       if (mandalName) {
@@ -40,11 +40,8 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
         setHighlightedDistrict(districtName);
         setHighlightedMandal(null);
       }
-    } else {
-      // Clear highlighting when sidebar closes
-      setHighlightedDistrict(null);
-      setHighlightedMandal(null);
     }
+    // Note: Don't clear highlighting when sidebar closes to maintain map state
   }, [isVisible, districtName, mandalName, setHighlightedDistrict, setHighlightedMandal]);
 
   // Filter and sort reports

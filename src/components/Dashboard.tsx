@@ -47,8 +47,7 @@ export default function Dashboard() {
 
     const handleCloseReportsSidebar = () => {
         setShowReportsSidebar(false);
-        // Optionally clear filters when closing sidebar
-        setFilters({ district: null, mandal: null });
+        // Keep filters intact - only clear them when user explicitly clears filters from main sidebar
     };
 
     if (loading) {
