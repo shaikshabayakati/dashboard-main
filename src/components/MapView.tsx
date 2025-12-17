@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView, HeatmapLayer } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
 import { useGeographic } from '@/contexts/GeographicContext';
@@ -22,13 +22,8 @@ const mapContainerStyle = {
   height: '100%'
 };
 
-// Andhra Pradesh bounds (approximate)
-const andhraPradesh_Bounds = {
-  north: 19.9, // Northern boundary
-  south: 12.6, // Southern boundary
-  east: 84.8,  // Eastern boundary
-  west: 76.8   // Western boundary
-};
+// Define libraries as a static constant to prevent infinite loops in useJsApiLoader
+const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['visualization'];
 
 const defaultCenter = {
   lat: 15.9129,
@@ -38,7 +33,8 @@ const defaultCenter = {
 const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, selectedMandal }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries
   });
 
   const {
@@ -55,7 +51,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     mapTypeControl: true,
     mapTypeControlOptions: {
       style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1,
-      position: window.google?.maps?.ControlPosition?.TOP_RIGHT || 2,
+      position: window.google?.maps?.ControlPosition?.TOP_CENTER || 2,
       mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
     },
     streetViewControl: false,
@@ -81,6 +77,42 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
   const [districtDataLayer, setDistrictDataLayer] = useState<google.maps.Data | null>(null);
   const [mandalDataLayer, setMandalDataLayer] = useState<google.maps.Data | null>(null);
 
+  // Generate Heatmap Data
+  const heatmapData = useMemo(() => {
+    if (!isLoaded || !window.google || !reports) return [];
+
+    return reports
+      .filter(r => r.lat && r.lng) // Ensure valid coordinates
+      .map(report => ({
+        location: new google.maps.LatLng(report.lat, report.lng),
+        weight: 1 // Use constant weight to visualize density (number of reports)
+      }));
+  }, [isLoaded, reports]);
+
+  const heatmapOptions = useMemo(() => ({
+    radius: 30,
+    opacity: 0.6,
+    dissipating: true,
+    gradient: [
+      'rgba(0, 255, 255, 0)',
+      'rgba(0, 255, 255, 1)',
+      'rgba(0, 191, 255, 1)',
+      'rgba(0, 127, 255, 1)',
+      'rgba(0, 63, 255, 1)',
+      'rgba(0, 0, 255, 1)',
+      'rgba(0, 0, 223, 1)',
+      'rgba(0, 0, 191, 1)',
+      'rgba(0, 0, 159, 1)',
+      'rgba(0, 0, 127, 1)',
+      'rgba(63, 0, 91, 1)',
+      'rgba(127, 0, 63, 1)',
+      'rgba(191, 0, 31, 1)',
+      'rgba(255, 0, 0, 1)'
+    ]
+  }), []);
+
+  const [isHeatmapMode, setIsHeatmapMode] = useState(false);
+
   // Auto-fit map to show all filtered reports when filters change
   useEffect(() => {
     if (map && reports.length > 0) {
@@ -103,7 +135,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     // Clear existing highlighting
     setHighlightedDistrict(null);
     setHighlightedMandal(null);
-    
+
     // Clear existing data layers
     if (districtDataLayer) {
       districtDataLayer.setMap(null);
@@ -117,11 +149,11 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     // Handle mandal selection (has priority over district)
     if (selectedMandal) {
       setHighlightedMandal(selectedMandal);
-      
+
       // Get mandal boundary and center
       const mandalBoundary = getMandalBoundary(selectedMandal);
       const mandalCenter = getMandalCenter(selectedMandal);
-      
+
       if (mandalBoundary) {
         try {
           // Create data layer for mandal
@@ -140,7 +172,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
           console.error('Error creating mandal data layer:', error, mandalBoundary);
         }
       }
-      
+
       if (mandalCenter && typeof mandalCenter.lat === 'number' && typeof mandalCenter.lng === 'number' && !isNaN(mandalCenter.lat) && !isNaN(mandalCenter.lng)) {
         // Scroll to mandal center only if coordinates are valid
         map.setCenter(mandalCenter);
@@ -148,7 +180,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
       } else {
         console.error('Invalid mandal center coordinates for:', selectedMandal, mandalCenter);
       }
-      
+
       // Also highlight the containing district
       if (selectedDistrict) {
         setHighlightedDistrict(selectedDistrict);
@@ -170,7 +202,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     } else if (selectedDistrict) {
       // Handle district-only selection
       setHighlightedDistrict(selectedDistrict);
-      
+
       const districtBoundary = getDistrictBoundary(selectedDistrict);
       if (districtBoundary) {
         try {
@@ -186,13 +218,13 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
           });
           dataLayer.setMap(map);
           setDistrictDataLayer(dataLayer);
-        
+
           // Fit map to district bounds
           const bounds = new google.maps.LatLngBounds();
           districtBoundary.features.forEach((feature: any) => {
             if (feature.geometry && feature.geometry.coordinates) {
               let allCoordinates: [number, number][] = [];
-              
+
               // Handle both Polygon and MultiPolygon geometries
               if (feature.geometry.type === 'MultiPolygon') {
                 feature.geometry.coordinates.forEach((polygon: any) => {
@@ -205,16 +237,16 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
                   allCoordinates = feature.geometry.coordinates[0];
                 }
               }
-              
+
               allCoordinates.forEach((coord: [number, number]) => {
-                if (typeof coord[0] === 'number' && typeof coord[1] === 'number' && 
-                    !isNaN(coord[0]) && !isNaN(coord[1])) {
+                if (typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
+                  !isNaN(coord[0]) && !isNaN(coord[1])) {
                   bounds.extend({ lat: coord[1], lng: coord[0] });
                 }
               });
             }
           });
-          
+
           if (!bounds.isEmpty()) {
             map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 370 });
           }
@@ -392,6 +424,16 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
 
   return (
     <div className="relative w-full h-full">
+      {/* Custom Heatmap Toggle Button - Standard Google Maps Control styling */}
+      <div className="absolute top-[10px] right-[60px] z-[5] flex items-center bg-white rounded-sm shadow-[0_1px_4px_rgba(0,0,0,0.3)] h-10 cursor-pointer transition-colors user-select-none">
+        <button
+          onClick={() => setIsHeatmapMode(!isHeatmapMode)}
+          className={`px-4 h-full text-sm font-medium ${isHeatmapMode ? 'text-blue-600 hover:bg-gray-50' : 'text-gray-600 hover:text-black hover:bg-gray-50'}`}
+        >
+          {isHeatmapMode ? 'Show Clusters' : 'Show Heatmaps'}
+        </button>
+      </div>
+
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={defaultCenter}
@@ -401,8 +443,14 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         onBoundsChanged={onBoundsChanged}
         options={mapOptions}
       >
+        {/* Heatmap Layer - Always render but clear data when hidden to ensure cleanup */}
+        <HeatmapLayer
+          data={isHeatmapMode ? heatmapData : []}
+          options={heatmapOptions}
+        />
 
-        {clusters.map((cluster) => {
+        {/* Clusters and Markers - Only visible in Normal Mode */}
+        {!isHeatmapMode && clusters.map((cluster) => {
           const [lng, lat] = cluster.geometry.coordinates;
           const { cluster: isCluster, point_count, cluster_id, dominantSeverityLabel } = cluster.properties;
 
@@ -437,8 +485,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
           );
         })}
 
-        {/* Selected Report Card - Popup near marker */}
-        {selectedReport && (
+        {/* Selected Report Card - Only visible in Normal Mode */}
+        {!isHeatmapMode && selectedReport && (
           <OverlayView
             position={{ lat: selectedReport.lat, lng: selectedReport.lng }}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
@@ -477,8 +525,8 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         )}
       </GoogleMap>
 
-      {/* Cluster List View */}
-      {clusterReports && (
+      {/* Cluster List View - Only visible in Normal Mode */}
+      {!isHeatmapMode && clusterReports && (
         <ClusterListView
           reports={clusterReports}
           onClose={() => setClusterReports(null)}
