@@ -207,7 +207,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
               <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
                 <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
                 <p className="leading-relaxed">
-                  The impact score is calculated by combining both pothole severity and the traffic conditions.Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
+                  The impact score is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
                 </p>
               </div>
             </div>
