@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView, HeatmapLayer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView, HeatmapLayer, Marker } from '@react-google-maps/api';
 import Supercluster from 'supercluster';
 import { PotholeReport } from '@/types/PotholeReport';
 import { useGeographic } from '@/contexts/GeographicContext';
-import ClusterMarker from './ClusterMarker';
-import PotholeMarker from './PotholeMarker';
 import ReportCard from './ReportCard';
 import ClusterListView from './ClusterListView';
+import { getSeverityColor } from '@/utils/helpers';
 
 interface MapViewProps {
   reports: PotholeReport[];
@@ -28,6 +27,40 @@ const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['vis
 const defaultCenter = {
   lat: 15.9129,
   lng: 79.7400
+};
+
+// Helper to create SVG icon for Pothole Marker
+const createPotholeIcon = (color: string, label: string) => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="40" viewBox="0 0 30 40">
+      <path d="M15 0C6.716 0 0 6.716 0 15c0 8.284 15 25 15 25s15-16.716 15-25C30 6.716 23.284 0 15 0z" fill="${color}" />
+      <circle cx="15" cy="15" r="8" fill="white" />
+      <text x="15" y="19" font-size="12" font-weight="bold" font-family="Arial" text-anchor="middle" fill="${color}">${label}</text>
+    </svg>
+  `;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(30, 40),
+    labelOrigin: new google.maps.Point(15, 15)
+  };
+};
+
+// Helper to create SVG icon for Cluster Marker
+const createClusterIcon = (count: number, color: string) => {
+  const baseSize = 40;
+  const size = Math.min(60, baseSize + Math.log2(count + 1) * 6);
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="${color}" fill-opacity="0.9" stroke="white" stroke-width="2"/>
+      <text x="50%" y="50%" dy=".3em" font-size="14" font-weight="bold" font-family="Arial" text-anchor="middle" fill="white">${count}</text>
+    </svg>
+  `;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(size, size),
+    anchor: new google.maps.Point(size / 2, size / 2)
+  };
 };
 
 const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, selectedMandal }) => {
@@ -64,7 +97,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     },
     minZoom: 3,
     maxZoom: 20,
-    clickableIcons: false  // Disable clicking on POI icons (places, businesses, etc.)
+    clickableIcons: false
   }), []);
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -74,20 +107,24 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
   const [clusterReports, setClusterReports] = useState<PotholeReport[] | null>(null);
   const [reportOpenedAtZoom, setReportOpenedAtZoom] = useState<number | null>(null);
   const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [districtDataLayer, setDistrictDataLayer] = useState<google.maps.Data | null>(null);
-  const [mandalDataLayer, setMandalDataLayer] = useState<google.maps.Data | null>(null);
 
-  // Generate Heatmap Data
+  // Refs for Data Layers (replacing state)
+  const districtDataLayerRef = useRef<google.maps.Data | null>(null);
+  const mandalDataLayerRef = useRef<google.maps.Data | null>(null);
+
+  const [isHeatmapMode, setIsHeatmapMode] = useState(false);
+
+  // Lazy-load Heatmap Data
   const heatmapData = useMemo(() => {
-    if (!isLoaded || !window.google || !reports) return [];
+    if (!isLoaded || !isHeatmapMode || !window.google || !reports) return [];
 
     return reports
-      .filter(r => r.lat && r.lng) // Ensure valid coordinates
+      .filter(r => r.lat && r.lng)
       .map(report => ({
         location: new google.maps.LatLng(report.lat, report.lng),
-        weight: 1 // Use constant weight to visualize density (number of reports)
+        weight: 1
       }));
-  }, [isLoaded, reports]);
+  }, [isLoaded, reports, isHeatmapMode]);
 
   const heatmapOptions = useMemo(() => ({
     radius: 30,
@@ -111,14 +148,10 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     ]
   }), []);
 
-  const [isHeatmapMode, setIsHeatmapMode] = useState(false);
-  
-  // Track last applied district/mandal to prevent unnecessary map updates
   const lastAppliedDistrict = useRef<string | null>(null);
   const lastAppliedMandal = useRef<string | null>(null);
   const mapInitialized = useRef(false);
 
-  // Auto-fit map to show all filtered reports when filters change (only on initial load)
   useEffect(() => {
     if (map && reports.length > 0 && !mapInitialized.current) {
       const bounds = new google.maps.LatLngBounds();
@@ -126,124 +159,104 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         bounds.extend({ lat: report.lat, lng: report.lng });
       });
 
-      // Only fit bounds if we have a valid bounds object
       if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 }); // Add padding, extra on left for sidebar
+        map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 });
         mapInitialized.current = true;
       }
     }
   }, [map, reports]);
 
-  // Handle district and mandal highlighting and scrolling - only when selection actually changes
+  // Optimized Highlight Effect: Reuse Data Layers
   useEffect(() => {
     if (!map || !window.google) return;
 
-    // Check if district/mandal selection actually changed
     const districtChanged = selectedDistrict !== lastAppliedDistrict.current;
     const mandalChanged = selectedMandal !== lastAppliedMandal.current;
-    
-    if (!districtChanged && !mandalChanged) {
-      return; // No change, don't update map
-    }
 
-    // Update tracking refs
+    if (!districtChanged && !mandalChanged) return;
+
     lastAppliedDistrict.current = selectedDistrict || null;
     lastAppliedMandal.current = selectedMandal || null;
 
-    // Clear existing highlighting
     setHighlightedDistrict(null);
     setHighlightedMandal(null);
 
-    // Clear existing data layers
-    if (districtDataLayer) {
-      districtDataLayer.setMap(null);
-      setDistrictDataLayer(null);
+    // Initialize layers if needed
+    if (!districtDataLayerRef.current) {
+      districtDataLayerRef.current = new google.maps.Data();
+      districtDataLayerRef.current.setMap(map);
     }
-    if (mandalDataLayer) {
-      mandalDataLayer.setMap(null);
-      setMandalDataLayer(null);
+    if (!mandalDataLayerRef.current) {
+      mandalDataLayerRef.current = new google.maps.Data();
+      mandalDataLayerRef.current.setMap(map);
     }
 
-    // Handle mandal selection (has priority over district)
+    const dLayer = districtDataLayerRef.current;
+    const mLayer = mandalDataLayerRef.current;
+
+    // Clear existing features
+    dLayer.forEach((feature) => dLayer.remove(feature));
+    mLayer.forEach((feature) => mLayer.remove(feature));
+
     if (selectedMandal) {
       setHighlightedMandal(selectedMandal);
-
-      // Get mandal boundary and center
       const mandalBoundary = getMandalBoundary(selectedMandal);
       const mandalCenter = getMandalCenter(selectedMandal);
 
       if (mandalBoundary) {
         try {
-          // Create data layer for mandal
-          const dataLayer = new google.maps.Data();
-          dataLayer.addGeoJson(mandalBoundary);
-          dataLayer.setStyle({
+          mLayer.addGeoJson(mandalBoundary);
+          mLayer.setStyle({
             fillColor: '#3B82F6',
             fillOpacity: 0.2,
             strokeColor: '#1D4ED8',
             strokeWeight: 3,
             strokeOpacity: 0.8
           });
-          dataLayer.setMap(map);
-          setMandalDataLayer(dataLayer);
         } catch (error) {
-          console.error('Error creating mandal data layer:', error, mandalBoundary);
+          console.error('Error adding mandal boundary:', error);
         }
       }
 
       if (mandalCenter && typeof mandalCenter.lat === 'number' && typeof mandalCenter.lng === 'number' && !isNaN(mandalCenter.lat) && !isNaN(mandalCenter.lng)) {
-        // Scroll to mandal center only if coordinates are valid
         map.setCenter(mandalCenter);
         map.setZoom(12);
-      } else {
-        console.error('Invalid mandal center coordinates for:', selectedMandal, mandalCenter);
       }
 
-      // Also highlight the containing district
       if (selectedDistrict) {
         setHighlightedDistrict(selectedDistrict);
         const districtBoundary = getDistrictBoundary(selectedDistrict);
         if (districtBoundary) {
-          const districtLayer = new google.maps.Data();
-          districtLayer.addGeoJson(districtBoundary);
-          districtLayer.setStyle({
+          dLayer.addGeoJson(districtBoundary);
+          dLayer.setStyle({
             fillColor: '#10B981',
             fillOpacity: 0.1,
             strokeColor: '#059669',
             strokeWeight: 2,
             strokeOpacity: 0.6
           });
-          districtLayer.setMap(map);
-          setDistrictDataLayer(districtLayer);
         }
       }
     } else if (selectedDistrict) {
-      // Handle district-only selection
       setHighlightedDistrict(selectedDistrict);
-
       const districtBoundary = getDistrictBoundary(selectedDistrict);
+
       if (districtBoundary) {
         try {
-          // Create data layer for district
-          const dataLayer = new google.maps.Data();
-          dataLayer.addGeoJson(districtBoundary);
-          dataLayer.setStyle({
+          dLayer.addGeoJson(districtBoundary);
+          dLayer.setStyle({
             fillColor: '#10B981',
             fillOpacity: 0.2,
             strokeColor: '#059669',
             strokeWeight: 3,
             strokeOpacity: 0.8
           });
-          dataLayer.setMap(map);
-          setDistrictDataLayer(dataLayer);
 
-          // Fit map to district bounds
+          // Fit bounds logic - strictly on change
           const bounds = new google.maps.LatLngBounds();
           districtBoundary.features.forEach((feature: any) => {
             if (feature.geometry && feature.geometry.coordinates) {
               let allCoordinates: [number, number][] = [];
-
-              // Handle both Polygon and MultiPolygon geometries
               if (feature.geometry.type === 'MultiPolygon') {
                 feature.geometry.coordinates.forEach((polygon: any) => {
                   if (polygon[0] && Array.isArray(polygon[0])) {
@@ -255,7 +268,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
                   allCoordinates = feature.geometry.coordinates[0];
                 }
               }
-
               allCoordinates.forEach((coord: [number, number]) => {
                 if (typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
                   !isNaN(coord[0]) && !isNaN(coord[1])) {
@@ -264,34 +276,33 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
               });
             }
           });
-
           if (!bounds.isEmpty()) {
             map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 370 });
           }
         } catch (error) {
-          console.error('Error creating district data layer:', error, districtBoundary);
+          console.error('Error adding district boundary:', error);
         }
       }
     }
+  }, [map, selectedDistrict, selectedMandal, getDistrictBoundary, getMandalBoundary, getMandalCenter, setHighlightedDistrict, setHighlightedMandal]);
 
-    // Cleanup function
-    return () => {
-      if (districtDataLayer) {
-        districtDataLayer.setMap(null);
-      }
-      if (mandalDataLayer) {
-        mandalDataLayer.setMap(null);
-      }
-    };
-  }, [map, selectedDistrict, selectedMandal, getDistrictBoundary, getMandalBoundary, getMandalCenter]);
-
-  // Initialize Supercluster - now using pre-filtered reports from Dashboard
   const supercluster = useMemo(() => {
     const cluster = new Supercluster({
-      radius: 60,      // Pixel radius for clustering - larger for better grouping
-      maxZoom: 18,     // Stop clustering at zoom 18, show individual markers beyond this
-      minZoom: 0,      // Start clustering from zoom 0
-      minPoints: 2,    // Minimum 2 points to form a cluster
+      radius: 60,
+      maxZoom: 18,
+      minZoom: 0,
+      minPoints: 2,
+      map: (props: any) => {
+        const severity = props.report.severityLabel || 'unknown';
+        return {
+          severityCounts: { [severity]: 1 }
+        };
+      },
+      reduce: (accumulated: any, props: any) => {
+        for (const severity in props.severityCounts) {
+          accumulated.severityCounts[severity] = (accumulated.severityCounts[severity] || 0) + props.severityCounts[severity];
+        }
+      }
     });
 
     const points = reports.map((report) => ({
@@ -310,7 +321,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     return cluster;
   }, [reports]);
 
-  // Get clusters for current viewport with pre-computed dominant labels
   const clusters = useMemo(() => {
     if (!bounds) return [];
 
@@ -323,20 +333,19 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
 
     const rawClusters = supercluster.getClusters(bbox, Math.floor(zoom));
 
-    // Pre-compute dominant severity labels for all clusters at once
     return rawClusters.map((cluster) => {
       if (cluster.properties.cluster) {
-        const leaves = supercluster.getLeaves(cluster.properties.cluster_id!, Infinity);
-        const labelCounts: Record<string, number> = {};
-        leaves.forEach((leaf: any) => {
-          const label = leaf.properties.report.severityLabel || 'unknown';
-          labelCounts[label] = (labelCounts[label] || 0) + 1;
-        });
-        const dominantLabel = Object.entries(labelCounts).reduce(
-          (max, [label, count]) => (count > max.count ? { label, count } : max),
-          { label: 'unknown', count: 0 }
-        ).label;
-
+        const severityCounts = cluster.properties.severityCounts as Record<string, number>;
+        let dominantLabel = 'unknown';
+        let maxCount = 0;
+        if (severityCounts) {
+          Object.entries(severityCounts).forEach(([label, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              dominantLabel = label;
+            }
+          });
+        }
         return {
           ...cluster,
           properties: {
@@ -347,6 +356,7 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
       }
       return cluster;
     });
+
   }, [bounds, zoom, supercluster]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -360,62 +370,40 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
 
   const onBoundsChanged = useCallback(() => {
     if (!map) return;
-
-    // Throttle bounds updates to improve performance during panning/zooming
     if (boundsChangeTimeout.current) {
       clearTimeout(boundsChangeTimeout.current);
     }
-
     boundsChangeTimeout.current = setTimeout(() => {
       const newZoom = map.getZoom() || 12;
       setBounds(map.getBounds() || null);
-
-      // Auto-close report card when zooming out
       if (selectedReport && reportOpenedAtZoom !== null && newZoom < reportOpenedAtZoom) {
         setSelectedReport(null);
         setReportOpenedAtZoom(null);
       }
-
       setZoom(newZoom);
-    }, 100); // 100ms throttle
+    }, 200);
   }, [map, selectedReport, reportOpenedAtZoom, zoom]);
 
   const handleClusterClick = useCallback((clusterId: number, clusterLat: number, clusterLng: number) => {
     if (!map) return;
-
-    // Close any open single report when clicking a cluster
     setSelectedReport(null);
     setReportOpenedAtZoom(null);
-
-    // Get the zoom level Supercluster recommends for this cluster
     const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(clusterId), 20);
-
-    // Zoom to the expansion zoom level and center on cluster
     map.setZoom(expansionZoom);
     map.panTo({ lat: clusterLat, lng: clusterLng });
   }, [map, supercluster]);
 
   const handleMarkerClick = useCallback((report: PotholeReport) => {
-    // Close cluster list when clicking a single marker
     setClusterReports(null);
     setSelectedReport(report);
-    // Track the zoom level when report was opened (for auto-close on zoom out)
     setReportOpenedAtZoom(map?.getZoom() || zoom);
-
-    // Pan to marker but offset downward so the popup card is fully visible
-    // This places the marker in the lower portion of the screen
     if (map) {
-      const mapDiv = map.getDiv();
-      const mapHeight = mapDiv.offsetHeight;
-      // Calculate offset: move the center point down by ~30% of map height
-      // so the marker appears in the lower third, leaving room for the card above
+      const scale = Math.pow(2, map.getZoom() || 12);
+      const offsetY = 350 / scale;
       const projection = map.getProjection();
       if (projection) {
         const point = projection.fromLatLngToPoint(new google.maps.LatLng(report.lat, report.lng));
         if (point) {
-          const scale = Math.pow(2, map.getZoom() || 12);
-          // Offset by ~350 pixels worth of latitude (card height + margin)
-          const offsetY = 350 / scale;
           const newPoint = new google.maps.Point(point.x, point.y - offsetY);
           const newLatLng = projection.fromPointToLatLng(newPoint);
           if (newLatLng) {
@@ -424,7 +412,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
           }
         }
       }
-      // Fallback: just pan to the marker
       map.panTo({ lat: report.lat, lng: report.lng });
     }
   }, [map, zoom]);
@@ -442,7 +429,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
 
   return (
     <div className="relative w-full h-full">
-      {/* Custom Heatmap Toggle Button - Standard Google Maps Control styling */}
       <div className="absolute top-[10px] right-[10px] z-[5] flex items-center bg-white rounded-sm shadow-[0_1px_4px_rgba(0,0,0,0.3)] h-10 cursor-pointer transition-colors user-select-none">
         <button
           onClick={() => setIsHeatmapMode(!isHeatmapMode)}
@@ -461,49 +447,52 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         onBoundsChanged={onBoundsChanged}
         options={mapOptions}
       >
-        {/* Heatmap Layer - Always render but clear data when hidden to ensure cleanup */}
         <HeatmapLayer
           data={isHeatmapMode ? heatmapData : []}
           options={heatmapOptions}
         />
 
-        {/* Clusters and Markers - Only visible in Normal Mode */}
         {!isHeatmapMode && clusters.map((cluster) => {
           const [lng, lat] = cluster.geometry.coordinates;
           const { cluster: isCluster, point_count, cluster_id, dominantSeverityLabel } = cluster.properties;
 
           if (isCluster) {
+            const count = point_count || 0;
+            const label = dominantSeverityLabel || 'unknown';
+            const color = getSeverityColor(label);
+
             return (
-              <OverlayView
+              <Marker
                 key={`cluster-${cluster_id}`}
                 position={{ lat, lng }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <ClusterMarker
-                  count={point_count!}
-                  dominantSeverityLabel={dominantSeverityLabel || 'unknown'}
-                  onClick={() => handleClusterClick(cluster_id!, lat, lng)}
-                />
-              </OverlayView>
+                icon={createClusterIcon(count, color)}
+                onClick={() => handleClusterClick(cluster_id!, lat, lng)}
+                zIndex={100}
+                label={{
+                  text: count.toString(),
+                  color: "white",
+                  fontSize: "14px",
+                  fontWeight: "bold"
+                }}
+              />
             );
           }
 
           const report = cluster.properties.report;
+          const severityLabel = report.severityLabel || 'unknown';
+          const color = getSeverityColor(severityLabel);
+          const charLabel = severityLabel.charAt(0).toUpperCase();
+
           return (
-            <OverlayView
+            <Marker
               key={`report-${report.id}`}
               position={{ lat, lng }}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            >
-              <PotholeMarker
-                severityLabel={report.severityLabel}
-                onClick={() => handleMarkerClick(report)}
-              />
-            </OverlayView>
+              icon={createPotholeIcon(color, charLabel)}
+              onClick={() => handleMarkerClick(report)}
+            />
           );
         })}
 
-        {/* Selected Report Card - Only visible in Normal Mode */}
         {!isHeatmapMode && selectedReport && (
           <OverlayView
             position={{ lat: selectedReport.lat, lng: selectedReport.lng }}
@@ -527,7 +516,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
                   isExpanded={true}
                 />
               </div>
-              {/* Arrow pointing to marker */}
               <div
                 className="absolute left-1/2 -bottom-2 w-0 h-0"
                 style={{
@@ -543,7 +531,6 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
         )}
       </GoogleMap>
 
-      {/* Cluster List View - Only visible in Normal Mode */}
       {!isHeatmapMode && clusterReports && (
         <ClusterListView
           reports={clusterReports}
