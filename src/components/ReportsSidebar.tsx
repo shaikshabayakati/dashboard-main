@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { PotholeReport } from '@/types/PotholeReport';
 import { useGeographic } from '@/contexts/GeographicContext';
 import ReportCard from './ReportCard';
@@ -17,18 +17,25 @@ interface ReportsSidebarProps {
 type SortOption = 'recent' | 'oldest' | 'severity-high' | 'severity-low';
 type SeverityFilter = 'all' | 'high' | 'medium' | 'low';
 
-const ReportsSidebar: React.FC<ReportsSidebarProps> = ({ 
-  districtName, 
+const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
+  districtName,
   mandalName,
   reports,
   onClose,
-  isVisible 
+  isVisible
 }) => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
+  const [visibleCount, setVisibleCount] = useState(10);
+  const observerRef = useRef<HTMLDivElement | null>(null);
+
   const { setHighlightedDistrict, setHighlightedMandal } = useGeographic();
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [sortBy, severityFilter, reports]);
 
   // Set highlighting when sidebar opens - maintain highlighting when closed
   useEffect(() => {
@@ -71,6 +78,38 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
 
     return filtered;
   }, [reports, sortBy, severityFilter]);
+
+  // Infinite scroll logic
+  const loadMore = useCallback(() => {
+    setVisibleCount(prev => prev + 10);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < filteredAndSortedReports.length) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentObserver = observerRef.current;
+    if (currentObserver) {
+      observer.observe(currentObserver);
+    }
+
+    return () => {
+      if (currentObserver) {
+        observer.unobserve(currentObserver);
+      }
+    };
+  }, [visibleCount, filteredAndSortedReports.length, loadMore]);
+
+  // Get visible reports based on pagination
+  const visibleReports = useMemo(() => {
+    return filteredAndSortedReports.slice(0, visibleCount);
+  }, [filteredAndSortedReports, visibleCount]);
 
   // Calculate severity counts
   const severityCounts = useMemo(() => {
@@ -151,24 +190,30 @@ const ReportsSidebar: React.FC<ReportsSidebarProps> = ({
                 {reports.length === 0 ? 'No reports in this area' : 'No reports match the filters'}
               </p>
               <p className="text-gray-400 text-sm text-center mt-2">
-                {reports.length === 0 
+                {reports.length === 0
                   ? 'Reports will appear here when available'
                   : 'Try adjusting your filters'
                 }
               </p>
             </div>
           ) : (
-            <div className="space-y-3 p-4">
-              {filteredAndSortedReports.map((report) => (
-                <div key={report.id} className="transform transition-transform hover:scale-[1.01]">
-                  <ReportCard 
-                    report={report} 
-                    isExpanded={false}
-                    onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
-                  />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="space-y-3 p-4">
+                {visibleReports.map((report) => (
+                  <div key={report.id} className="transform transition-transform hover:scale-[1.01]">
+                    <ReportCard
+                      report={report}
+                      isExpanded={false}
+                      onImageClick={(imageUrl) => setSelectedImage(imageUrl)}
+                    />
+                  </div>
+                ))}
+              </div>
+              {/* Infinite scroll observer */}
+              {visibleCount < filteredAndSortedReports.length && (
+                <div ref={observerRef} className="h-4 w-full" />
+              )}
+            </>
           )}
         </div>
 

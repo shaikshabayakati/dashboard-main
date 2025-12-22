@@ -97,7 +97,28 @@ const MapView: React.FC<MapViewProps> = ({ reports, filters, selectedDistrict, s
     },
     minZoom: 3,
     maxZoom: 20,
-    clickableIcons: false
+    clickableIcons: false,
+    // Disable POIs, transit, and business labels for faster loading
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }]
+      },
+      {
+        featureType: 'poi.business',
+        stylers: [{ visibility: 'off' }]
+      },
+      {
+        featureType: 'transit',
+        elementType: 'labels.icon',
+        stylers: [{ visibility: 'off' }]
+      },
+      {
+        featureType: 'transit.station',
+        stylers: [{ visibility: 'off' }]
+      }
+    ]
   }), []);
 
   const [map, setMap] = useState<google.maps.Map | null>(null);

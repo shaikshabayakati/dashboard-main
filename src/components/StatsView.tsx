@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { usePotholeReports } from '@/hooks/usePotholeReports';
 import { useGeographic } from '@/contexts/GeographicContext';
 import { PotholeReport } from '@/types/PotholeReport';
@@ -27,6 +27,14 @@ export default function StatsView() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [tooltipVisible, setTooltipVisible] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [loadedImages, setLoadedImages] = useState<Record<string, string[]>>({});
+  const observerRef = useRef<HTMLTableRowElement | null>(null);
+
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setVisibleCount(10);
+  }, [severityFilter, locationFilter, districtFilter, mandalFilter, startDate, endDate, sortColumn, sortOrder]);
 
   // Get available mandals for selected district
   const availableMandals = useMemo(() => {
@@ -67,6 +75,14 @@ export default function StatsView() {
       topMandals,
     };
   }, [reports]);
+
+  // Load images for a specific report
+  const handleLoadImages = async (reportId: string, imageUrls: string[]) => {
+    setLoadedImages(prev => ({
+      ...prev,
+      [reportId]: imageUrls
+    }));
+  };
 
   // Filter and sort reports
   const filteredReports = useMemo(() => {
@@ -117,6 +133,38 @@ export default function StatsView() {
 
     return filtered;
   }, [reports, filterReportsByLocation, districtFilter, mandalFilter, severityFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
+
+  // Infinite scroll logic
+  const loadMore = useCallback(() => {
+    setVisibleCount(prev => prev + 10);
+  }, []);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < filteredReports.length) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentObserver = observerRef.current;
+    if (currentObserver) {
+      observer.observe(currentObserver);
+    }
+
+    return () => {
+      if (currentObserver) {
+        observer.unobserve(currentObserver);
+      }
+    };
+  }, [visibleCount, filteredReports.length, loadMore]);
+
+  // Get visible reports based on pagination
+  const visibleReports = useMemo(() => {
+    return filteredReports.slice(0, visibleCount);
+  }, [filteredReports, visibleCount]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -434,7 +482,7 @@ export default function StatsView() {
                         </td>
                       </tr>
                     ) : (
-                      filteredReports.map((report) => (
+                      visibleReports.map((report) => (
                         <React.Fragment key={report.id}>
                           <tr
                             className={`${isDarkMode ? 'hover:bg-[#1a1b23]' : 'hover:bg-gray-50'} transition-colors cursor-pointer`}
@@ -531,17 +579,37 @@ export default function StatsView() {
                                   {report.images && report.images.length > 0 && (
                                     <div className="col-span-full">
                                       <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Citizen Uploaded Image:</span>
-                                      <div className="flex gap-2 mt-2 flex-wrap">
-                                        {report.images.map((img, idx) => (
-                                          <img
-                                            key={idx}
-                                            src={img}
-                                            alt={`Report ${idx + 1}`}
-                                            onClick={() => setSelectedImage(img)}
-                                            className={`w-24 h-24 object-cover rounded border ${isDarkMode ? 'border-gray-700 hover:border-purple-500' : 'border-gray-300 hover:border-purple-500'} cursor-pointer transition-all hover:scale-105`}
-                                          />
-                                        ))}
-                                      </div>
+                                      {!loadedImages[report.id] ? (
+                                        <div className="mt-2">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleLoadImages(report.id, report.images);
+                                            }}
+                                            className={`px-4 py-2 text-sm rounded-md font-medium transition-colors shadow-sm hover:shadow ${isDarkMode
+                                              ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                              : 'bg-purple-500 hover:bg-purple-600 text-white'
+                                              }`}
+                                          >
+                                            Load Image
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex gap-2 mt-2 flex-wrap">
+                                          {loadedImages[report.id].map((img, idx) => (
+                                            <img
+                                              key={idx}
+                                              src={img}
+                                              alt={`Report ${idx + 1}`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedImage(img);
+                                              }}
+                                              className={`w-24 h-24 object-cover rounded border ${isDarkMode ? 'border-gray-700 hover:border-purple-500' : 'border-gray-300 hover:border-purple-500'} cursor-pointer transition-all hover:scale-105`}
+                                            />
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -550,6 +618,12 @@ export default function StatsView() {
                           )}
                         </React.Fragment>
                       ))
+                    )}
+                    {/* Infinite scroll observer */}
+                    {visibleCount < filteredReports.length && (
+                      <tr ref={observerRef}>
+                        <td colSpan={6} className="h-4"></td>
+                      </tr>
                     )}
                   </tbody>
                 </table>

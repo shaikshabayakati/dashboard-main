@@ -170,15 +170,19 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
     // Handle both Polygon and MultiPolygon geometries
     if (mandalFeature.geometry.type === 'MultiPolygon') {
       // For MultiPolygon, coordinates are [[[polygon1]], [[polygon2]], ...]
-      mandalFeature.geometry.coordinates.forEach((polygon: any) => {
+      const multiPolygonCoords = mandalFeature.geometry.coordinates as number[][][][];
+      multiPolygonCoords.forEach((polygon: number[][][]) => {
         if (polygon[0] && Array.isArray(polygon[0])) {
-          allCoordinates.push(...polygon[0]);
+          // polygon[0] is the exterior ring coordinates
+          const exteriorRing = polygon[0] as [number, number][];
+          allCoordinates.push(...exteriorRing);
         }
       });
     } else if (mandalFeature.geometry.type === 'Polygon') {
       // For Polygon, coordinates are [[exterior_ring], [hole1], [hole2], ...]
-      if (mandalFeature.geometry.coordinates[0] && Array.isArray(mandalFeature.geometry.coordinates[0])) {
-        allCoordinates = mandalFeature.geometry.coordinates[0];
+      const polygonCoords = mandalFeature.geometry.coordinates as number[][][];
+      if (polygonCoords[0] && Array.isArray(polygonCoords[0])) {
+        allCoordinates = polygonCoords[0] as [number, number][];
       }
     }
     
@@ -215,7 +219,7 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
       return null;
     }
     
-    return center;
+   return center;
   };
 
   const contextValue: GeographicContextType = {
