@@ -188,7 +188,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
         {report.impactScore !== undefined && (
           <div className="flex items-start justify-between text-sm">
             <div className="flex items-center gap-1 group relative">
-              <span className="font-medium text-gray-700">📈 Impact Score</span>
+              <span className="font-medium text-gray-700">📈 Impact Index</span>
               <span className="cursor-help text-gray-400 hover:text-gray-600 transition-colors">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -207,7 +207,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
               <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
                 <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
                 <p className="leading-relaxed">
-                  The impact score is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
+                  The impact index is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
                 </p>
               </div>
             </div>

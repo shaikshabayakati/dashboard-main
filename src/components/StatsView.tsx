@@ -459,7 +459,7 @@ export default function StatsView() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1">
-                            Impact Score
+                            Impact Index
                             <div
                               className="relative"
                               onMouseEnter={() => setTooltipVisible('impact')}
@@ -472,7 +472,7 @@ export default function StatsView() {
                               {tooltipVisible === 'impact' && (
                                 <div className={`absolute top-full right-0 mt-2 w-72 ${isDarkMode ? 'bg-gray-900 text-gray-200 border-gray-700' : 'bg-white text-gray-800 border-gray-300'} border rounded-lg p-3 shadow-xl z-[9999] text-xs font-normal normal-case leading-relaxed`}>
                                   <div className="font-semibold mb-1">Traffic-Weighted Impact Analysis</div>
-                                  <div>The impact score is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.</div>
+                                  <div>The impact index is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.</div>
                                   <div className={`absolute bottom-full right-0 w-0 h-0 border-l-4 border-r-4 border-b-4 ${isDarkMode ? 'border-l-transparent border-r-transparent border-b-gray-900' : 'border-l-transparent border-r-transparent border-b-white'}`}></div>
                                 </div>
                               )}
