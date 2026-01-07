@@ -42,6 +42,9 @@ export interface DatabaseGeneralIssue {
     image_path: string | null;
     created_at: string;
     updated_at: string;
+    ward_number: number | null;
+    zone: string | null;
+    corporator_name_address: string | null;
 }
 
 // Frontend interface (camelCase for React components)
@@ -63,4 +66,7 @@ export interface GeneralIssue {
     imagePath: string | null;
     createdAt: string;
     updatedAt: string;
+    wardNumber: number | null;
+    zone: string | null;
+    corporatorNameAddress: string | null;
 }
