@@ -24,5 +24,8 @@ export function mapDatabaseGeneralIssuesToFrontend(
         imagePath: dbIssue.image_path,
         createdAt: dbIssue.created_at,
         updatedAt: dbIssue.updated_at,
+        wardNumber: dbIssue.ward_number,
+        zone: dbIssue.zone,
+        corporatorNameAddress: dbIssue.corporator_name_address,
     }));
 }
