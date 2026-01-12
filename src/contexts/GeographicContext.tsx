@@ -4,10 +4,10 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
-  GeoJSONFeatureCollection, 
-  loadGeoJSONData, 
-  getDistrictsFromGeoJSON, 
+import {
+  GeoJSONFeatureCollection,
+  loadGeoJSONData,
+  getDistrictsFromGeoJSON,
   getMandalsForDistrict,
   filterReportsByGeography,
   NEW_TO_OLD_DISTRICT_NAMES
@@ -60,18 +60,18 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Load the GeoJSON data from the public folder
-        const data = await loadGeoJSONData('/ANDHRA PRADESH_SUBDISTRICTS.geojson');
+        const data = await loadGeoJSONData('/andhra_pradesh_subdistricts.geojson');
         setGeoJsonData(data);
-        
+
         // Extract unique districts
         const districtList = getDistrictsFromGeoJSON(data);
         setDistricts(districtList);
-        
+
       } catch (err) {
         console.error('Failed to load geographic data:', err);
-        setError('Failed to load geographic boundary data');
+        setError(`Failed to load data: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setIsLoading(false);
       }
@@ -99,36 +99,36 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
       console.error('getDistrictBoundary: No geoJsonData available');
       return null;
     }
-    
+
     console.log('getDistrictBoundary called for district:', districtName);
-    
+
     // First try to find district-level features with NAME property
-    let districtFeatures = geoJsonData.features.filter((feature: any) => 
+    let districtFeatures = geoJsonData.features.filter((feature: any) =>
       feature.properties.boundary_level === 'district' && feature.properties.NAME === districtName
     );
-    
+
     console.log('Found district-level features:', districtFeatures.length);
-    
+
     // If no district-level features found, get all mandals/sub-districts for this district
     if (districtFeatures.length === 0) {
       // Get the old district name to match against dtname field for mandals
       const oldDistrictName = NEW_TO_OLD_DISTRICT_NAMES[districtName] || districtName;
       console.log('Mapping district name:', districtName, '→', oldDistrictName);
-      
-      districtFeatures = geoJsonData.features.filter((feature: any) => 
+
+      districtFeatures = geoJsonData.features.filter((feature: any) =>
         feature.properties.dtname === oldDistrictName && feature.properties.sdtname
       );
-      
+
       console.log('Found mandal features for', oldDistrictName + ':', districtFeatures.length);
     }
-    
+
     if (districtFeatures.length === 0) {
       console.error('No features found for district:', districtName);
       return null;
     }
-    
+
     console.log('Returning', districtFeatures.length, 'features for district:', districtName);
-    
+
     return {
       type: 'FeatureCollection',
       features: districtFeatures
@@ -139,13 +139,13 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
     if (!geoJsonData || !geoJsonData.features) {
       return null;
     }
-    
-    const mandalFeature = geoJsonData.features.find((feature: any) => 
+
+    const mandalFeature = geoJsonData.features.find((feature: any) =>
       feature.properties.sdtname === mandalName
     );
-    
+
     if (!mandalFeature) return null;
-    
+
     return {
       type: 'FeatureCollection',
       features: [mandalFeature]
@@ -156,17 +156,17 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
     if (!geoJsonData || !geoJsonData.features) {
       return null;
     }
-    
-    const mandalFeature = geoJsonData.features.find((feature: any) => 
+
+    const mandalFeature = geoJsonData.features.find((feature: any) =>
       feature.properties.sdtname === mandalName
     );
-    
+
     if (!mandalFeature || !mandalFeature.geometry) {
       return null;
     }
-    
+
     let allCoordinates: [number, number][] = [];
-    
+
     // Handle both Polygon and MultiPolygon geometries
     if (mandalFeature.geometry.type === 'MultiPolygon') {
       // For MultiPolygon, coordinates are [[[polygon1]], [[polygon2]], ...]
@@ -185,16 +185,16 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
         allCoordinates = polygonCoords[0] as [number, number][];
       }
     }
-    
+
     if (allCoordinates.length === 0) {
       console.error('No valid coordinates found for mandal:', mandalName);
       return null;
     }
-    
+
     let totalLat = 0;
     let totalLng = 0;
     let pointCount = 0;
-    
+
     allCoordinates.forEach((coord: [number, number]) => {
       if (typeof coord[0] === 'number' && typeof coord[1] === 'number') {
         totalLng += coord[0];
@@ -202,24 +202,24 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
         pointCount++;
       }
     });
-    
+
     if (pointCount === 0) {
       console.error('No valid coordinate points found for mandal:', mandalName);
       return null;
     }
-    
+
     const center = {
       lat: totalLat / pointCount,
       lng: totalLng / pointCount
     };
-    
+
     // Validate the calculated center
     if (isNaN(center.lat) || isNaN(center.lng)) {
       console.error('Invalid center coordinates calculated for mandal:', mandalName, center);
       return null;
     }
-    
-   return center;
+
+    return center;
   };
 
   const contextValue: GeographicContextType = {

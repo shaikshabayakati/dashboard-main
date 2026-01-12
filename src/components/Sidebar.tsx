@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ reports, onFilterChange, showReportsS
               {isLoading ? (
                 <div className="text-sm text-gray-500">Loading districts...</div>
               ) : error ? (
-                <div className="text-sm text-red-500">Error loading districts</div>
+                <div className="text-sm text-red-500">{error}</div>
               ) : (
                 <select
                   id="district-select"

@@ -107,8 +107,11 @@ temp/
 # Editor backup files
 *~
 *.bak
-*.backup 
+*.backup
 
-# GeoJSON files
-*.geojson
-**/*.geojson
+# Google service account
+*service-account.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json

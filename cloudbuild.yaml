@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/tech-bharath/dashboard-main',
+      '--build-arg', 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${_NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}',
+      '.'
+    ]
+images:
+  - 'gcr.io/tech-bharath/dashboard-main'
+substitutions:
+  _NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ''
