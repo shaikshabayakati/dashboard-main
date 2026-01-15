@@ -61,8 +61,8 @@ export function GeographicProvider({ children }: GeographicProviderProps) {
         setIsLoading(true);
         setError(null);
 
-        // Load the GeoJSON data from the public folder
-        const data = await loadGeoJSONData('/andhra_pradesh_subdistricts.geojson');
+        // Load the simplified GeoJSON data from the public folder (1.06 MB instead of 21.91 MB)
+        const data = await loadGeoJSONData('/andhra_pradesh_subdistricts_simplified.geojson');
         setGeoJsonData(data);
 
         // Extract unique districts

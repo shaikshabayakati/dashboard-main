@@ -66,8 +66,8 @@ export async function loadGeoJSON(): Promise<GeoJSONData | null> {
   }
 
   try {
-    // Use relative path that works in browser
-    const fileName = 'andhra_pradesh_subdistricts.geojson';
+    // Use simplified GeoJSON file (1.06 MB instead of 21.91 MB)
+    const fileName = 'andhra_pradesh_subdistricts_simplified.geojson';
     const encodedPath = encodeURI(`/${fileName}`);
 
     const response = await fetch(encodedPath);

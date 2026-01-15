@@ -53,6 +53,9 @@ export interface GeneralIssue {
     address: string;
     latitude: number | null;
     longitude: number | null;
+    // Aliases for map compatibility
+    lat: number | null;
+    lng: number | null;
     isAuthentic: boolean;
     rejectionReason: RejectionReasonType | null;
     isIssuePresent: boolean;
