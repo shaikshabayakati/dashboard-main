@@ -230,7 +230,7 @@ export default function VizagDashboard() {
                             <h2 className="text-base font-semibold text-gray-900">Map View</h2>
                             <Link
                                 href="/vizag/map"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-rgb(249,115,22) text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
                             >
                                 Full View
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,7 +248,7 @@ export default function VizagDashboard() {
                         <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                             <h2 className="text-base font-semibold text-gray-900">Recent Issues</h2>
                             <Link
-                                href="/vizaglistview"
+                                href="/vizag/view"
                                 className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
                             >
                                 Full View
