@@ -31,10 +31,10 @@ const COLORS = {
     'Open Manhole': '#EF4444',
     'Sewage': '#F97316',
     'Garbage': '#EAB308',
-    'Sidewalk Encroachment': '#3B82F6',
+    'Sidewalk Encroachment': '#F97316',
     'verified': '#10B981',
     'unverified': '#F59E0B',
-    'safe': '#3B82F6',
+    'safe': '#F97316',
     'unsafe': '#EF4444'
 };
 
@@ -177,7 +177,7 @@ export default function VizagDashboard() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-600 font-medium">Loading Dashboard...</p>
                 </div>
             </div>
@@ -192,7 +192,7 @@ export default function VizagDashboard() {
                     <div className="text-gray-600">{error}</div>
                     <button
                         onClick={() => window.location.reload()}
-                        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="mt-4 px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                     >
                         Retry
                     </button>
@@ -205,8 +205,8 @@ export default function VizagDashboard() {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center gap-3">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex items-center justify-start gap-3">
                         <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect width="384" height="21.3334" fill="#F97316" />
                             <path d="M0 128H128V256L0 128Z" fill="#F97316" />
@@ -230,7 +230,7 @@ export default function VizagDashboard() {
                             <h2 className="text-base font-semibold text-gray-900">Map View</h2>
                             <Link
                                 href="/vizag/map"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
                             >
                                 Full View
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +249,7 @@ export default function VizagDashboard() {
                             <h2 className="text-base font-semibold text-gray-900">Recent Issues</h2>
                             <Link
                                 href="/vizaglistview"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
                             >
                                 Full View
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +283,7 @@ export default function VizagDashboard() {
                     {/* Issue Types Breakdown Card */}
                     <div className="bg-white rounded-lg shadow border border-gray-200">
                         <div className="p-3 border-b border-gray-200">
-                            <h2 className="text-base font-semibold text-gray-900">{issues.length} Use Cases</h2>
+                            <h2 className="text-base font-semibold text-gray-900">{issues.length} Citizen Reports</h2>
                         </div>
                         <div className="h-[400px] overflow-y-auto p-3">
                             <div className="space-y-2">
@@ -336,7 +336,7 @@ export default function VizagDashboard() {
                                 <XAxis type="number" />
                                 <YAxis dataKey="ward" type="category" width={70} style={{ fontSize: '12px' }} />
                                 <Tooltip />
-                                <Bar dataKey="count" fill="#3B82F6" />
+                                <Bar dataKey="count" fill="#F97316" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -398,7 +398,7 @@ export default function VizagDashboard() {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Line type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={2} />
+                                <Line type="monotone" dataKey="total" stroke="#F97316" strokeWidth={2} />
                                 <Line type="monotone" dataKey="verified" stroke="#10B981" strokeWidth={2} />
                                 <Line type="monotone" dataKey="unverified" stroke="#F59E0B" strokeWidth={2} />
                             </LineChart>
