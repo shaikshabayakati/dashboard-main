@@ -18,7 +18,7 @@ const mapContainerStyle = {
     height: '100%'
 };
 
-const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['visualization'];
+const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['places', 'visualization'];
 
 const vizagCenter = {
     lat: 17.6869,

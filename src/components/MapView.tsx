@@ -22,7 +22,7 @@ const mapContainerStyle = {
 };
 
 // Define libraries as a static constant to prevent infinite loops in useJsApiLoader
-const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['visualization'];
+const libraries: ("visualization" | "places" | "drawing" | "geometry")[] = ['places', 'visualization'];
 
 const defaultCenter = {
   lat: 15.9129,
