@@ -7,14 +7,16 @@ import { PrimaryIssueType } from '@/types/GeneralIssue';
  */
 export function getPriorityColor(issueType: PrimaryIssueType | null): string {
     switch (issueType) {
-        case 'Open Manhole':
-            return '#DC2626'; // Red - High priority
-        case 'Sewage':
-            return '#EA580C'; // Orange-Red - High priority
-        case 'Garbage':
-            return '#F59E0B'; // Amber - Medium priority
-        case 'Sidewalk Encroachment':
-            return '#3B82F6'; // Blue - Medium priority
+        case 'Road':
+            return '#DC2626'; // Red
+        case 'Footpath':
+            return '#3B82F6'; // Blue
+        case 'Electricity':
+            return '#F59E0B'; // Amber
+        case 'Garbage/sewage':
+            return '#EA580C'; // Orange
+        case 'Stray animals':
+            return '#8B5CF6'; // Purple
         case 'None':
         default:
             return '#6B7280'; // Gray - Unknown/None
@@ -34,14 +36,16 @@ export function getPriorityLabel(issueType: PrimaryIssueType | null): string {
  */
 export function getIssueIcon(issueType: PrimaryIssueType | null): string {
     switch (issueType) {
-        case 'Open Manhole':
-            return '🕳️';
-        case 'Sewage':
-            return '💧';
-        case 'Garbage':
+        case 'Road':
+            return '🛣️';
+        case 'Footpath':
+            return '🚶';
+        case 'Electricity':
+            return '⚡';
+        case 'Garbage/sewage':
             return '🗑️';
-        case 'Sidewalk Encroachment':
-            return '🚧';
+        case 'Stray animals':
+            return '🐕';
         case 'None':
         default:
             return '❓';
@@ -109,6 +113,22 @@ export function getWardLabel(wardNumber: number | null): string {
  * Transform database general issue to frontend format
  */
 export function transformGeneralIssue(dbIssue: any): any {
+    // Normalize primary issue for consistency and merging
+    let primaryIssue = dbIssue.primary_issue || 'None';
+    const normalized = primaryIssue.toLowerCase().trim();
+
+    if (normalized.includes('garbage') || normalized.includes('sewage')) {
+        primaryIssue = 'Garbage/sewage';
+    } else if (normalized.includes('road')) {
+        primaryIssue = 'Road';
+    } else if (normalized.includes('footpath') || normalized.includes('sidewalk')) {
+        primaryIssue = 'Footpath';
+    } else if (normalized.includes('electricity')) {
+        primaryIssue = 'Electricity';
+    } else if (normalized.includes('stray') || normalized.includes('animal')) {
+        primaryIssue = 'Stray animals';
+    }
+
     return {
         id: dbIssue.id,
         address: dbIssue.address,
@@ -119,10 +139,10 @@ export function transformGeneralIssue(dbIssue: any): any {
         isAuthentic: dbIssue.is_authentic,
         rejectionReason: dbIssue.rejection_reason,
         isIssuePresent: dbIssue.is_issue_present,
-        primaryIssue: dbIssue.primary_issue,
+        primaryIssue: primaryIssue,
         subCategory: dbIssue.sub_category,
         evidence: dbIssue.evidence,
-        isInfrastructureSafe: dbIssue.is_infrastructure_safe,
+
         userPhone: dbIssue.user_phone,
         imageUrl: dbIssue.image_url,
         createdAt: dbIssue.created_at,

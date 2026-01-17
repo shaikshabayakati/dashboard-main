@@ -9,11 +9,9 @@ export default function VizagStatsView() {
 
     // Filter states
     const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
-    const [subCategoryFilter, setSubCategoryFilter] = useState<string>('all');
     const [wardFilter, setWardFilter] = useState<string>('');
     const [zoneFilter, setZoneFilter] = useState<string>('');
     const [verificationFilter, setVerificationFilter] = useState<string>('all');
-    const [safetyFilter, setSafetyFilter] = useState<string>('all');
     const [locationFilter, setLocationFilter] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
@@ -34,7 +32,7 @@ export default function VizagStatsView() {
     // Reset pagination when filters change
     React.useEffect(() => {
         setVisibleCount(10);
-    }, [issueTypeFilter, subCategoryFilter, wardFilter, zoneFilter, verificationFilter, safetyFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
+    }, [issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
 
     // Calculate stats for filters
     const stats = useMemo(() => {
@@ -70,11 +68,6 @@ export default function VizagStatsView() {
             filtered = filtered.filter(i => i.primaryIssue === issueTypeFilter);
         }
 
-        // Sub-Category filter
-        if (subCategoryFilter !== 'all') {
-            filtered = filtered.filter(i => i.subCategory === subCategoryFilter);
-        }
-
         // Ward filter
         if (wardFilter) {
             filtered = filtered.filter(i => i.wardNumber === parseInt(wardFilter));
@@ -92,13 +85,6 @@ export default function VizagStatsView() {
             );
         }
 
-        // Safety filter
-        if (safetyFilter !== 'all') {
-            filtered = filtered.filter(i =>
-                safetyFilter === 'safe' ? i.isInfrastructureSafe : !i.isInfrastructureSafe
-            );
-        }
-
         // Location text filter
         if (locationFilter) {
             filtered = filtered.filter(i =>
@@ -113,7 +99,7 @@ export default function VizagStatsView() {
         if (endDate) {
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-            filtered = filtered.filter(i => new Date(i.createdAt) <= end);
+            filtered = filtered.filter(i => i.createdAt ? new Date(i.createdAt) <= end : true);
         }
 
         // Sort
@@ -130,7 +116,7 @@ export default function VizagStatsView() {
         });
 
         return filtered;
-    }, [issues, issueTypeFilter, subCategoryFilter, wardFilter, zoneFilter, verificationFilter, safetyFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
+    }, [issues, issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
 
     // Infinite scroll logic
     const loadMore = useCallback(() => {
@@ -166,12 +152,21 @@ export default function VizagStatsView() {
 
     const getIssueTypeColor = (issueType: string | null) => {
         switch (issueType) {
-            case 'Open Manhole': return 'text-red-400 bg-red-400/10 border-red-400/20';
-            case 'Sewage': return 'text-orange-400 bg-orange-400/10 border-orange-400/20';
-            case 'Garbage': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
-            case 'Sidewalk Encroachment': return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+            case 'Road': return 'text-red-400 bg-red-400/10 border-red-400/20';
+            case 'Footpath': return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+            case 'Electricity': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
+            case 'Garbage/sewage': return 'text-orange-400 bg-orange-400/10 border-orange-400/20';
+            case 'Stray animals': return 'text-purple-400 bg-purple-400/10 border-purple-400/20';
             default: return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
         }
+    };
+
+    const getSeverityColor = (severity: string | null) => {
+        const s = (severity || '').toLowerCase();
+        if (s.includes('high')) return 'text-red-400 bg-red-400/10 border-red-400/20';
+        if (s.includes('medium')) return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
+        if (s.includes('low')) return 'text-green-400 bg-green-400/10 border-green-400/20';
+        return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
     };
 
     const handleSort = (column: SortColumn) => {
@@ -245,25 +240,11 @@ export default function VizagStatsView() {
                             className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
                         >
                             <option value="all">All Types</option>
-                            <option value="Open Manhole">🕳️ Open Manhole</option>
-                            <option value="Sewage">💧 Sewage</option>
-                            <option value="Garbage">🗑️ Garbage</option>
-                            <option value="Sidewalk Encroachment">🚧 Sidewalk Encroachment</option>
-                        </select>
-                    </div>
-
-                    {/* Sub-Category Filter */}
-                    <div>
-                        <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Sub-Category</label>
-                        <select
-                            value={subCategoryFilter}
-                            onChange={(e) => setSubCategoryFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-                        >
-                            <option value="all">All Categories</option>
-                            <option value="Domestic">Domestic</option>
-                            <option value="Construction">Construction</option>
-                            <option value="None">None</option>
+                            <option value="Road">🛣️ Road</option>
+                            <option value="Footpath">🚶 Footpath</option>
+                            <option value="Electricity">⚡ Electricity</option>
+                            <option value="Garbage/sewage">🗑️ Garbage/Sewage</option>
+                            <option value="Stray animals">🐕 Stray Animals</option>
                         </select>
                     </div>
 
@@ -315,20 +296,6 @@ export default function VizagStatsView() {
                         </select>
                     </div>
 
-                    {/* Safety Status Filter */}
-                    <div>
-                        <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Safety Status</label>
-                        <select
-                            value={safetyFilter}
-                            onChange={(e) => setSafetyFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="safe">✓ Infrastructure Safe</option>
-                            <option value="unsafe">⚠ Safety Concern</option>
-                        </select>
-                    </div>
-
                     {/* Location Filter */}
                     <div>
                         <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Location</label>
@@ -362,17 +329,14 @@ export default function VizagStatsView() {
                             className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
                         />
                     </div>
-
                     {/* Clear Filters */}
-                    {(issueTypeFilter !== 'all' || subCategoryFilter !== 'all' || wardFilter || zoneFilter || verificationFilter !== 'all' || safetyFilter !== 'all' || locationFilter || startDate || endDate) && (
+                    {(issueTypeFilter !== 'all' || wardFilter || zoneFilter || verificationFilter !== 'all' || locationFilter || startDate || endDate) && (
                         <button
                             onClick={() => {
                                 setIssueTypeFilter('all');
-                                setSubCategoryFilter('all');
                                 setWardFilter('');
                                 setZoneFilter('');
                                 setVerificationFilter('all');
-                                setSafetyFilter('all');
                                 setLocationFilter('');
                                 setStartDate('');
                                 setEndDate('');
@@ -471,8 +435,11 @@ export default function VizagStatsView() {
                                             <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[15%]`}>
                                                 Ward / Zone
                                             </th>
-                                            <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[20%]`}>
+                                            <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[12%]`}>
                                                 Status
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[12%]`}>
+                                                Severity
                                             </th>
                                             <th className="px-4 py-3 w-[5%]"></th>
                                         </tr>
@@ -480,7 +447,7 @@ export default function VizagStatsView() {
                                     <tbody className={`${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'} divide-y`}>
                                         {filteredIssues.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
+                                                <td colSpan={7} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
                                                     No issues found matching the filters
                                                 </td>
                                             </tr>
@@ -538,17 +505,12 @@ export default function VizagStatsView() {
                                                                         ⚠ Unverified
                                                                     </span>
                                                                 )}
-                                                                {issue.isInfrastructureSafe && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-400/10 text-blue-400 border border-blue-400/20">
-                                                                        ✓ Safe
-                                                                    </span>
-                                                                )}
-                                                                {!issue.isInfrastructureSafe && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-400/10 text-red-400 border border-red-400/20">
-                                                                        ⚠ Safety Concern
-                                                                    </span>
-                                                                )}
                                                             </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${getSeverityColor(issue.severity)}`}>
+                                                                {issue.severity || 'Unknown'}
+                                                            </span>
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
                                                             <svg
@@ -563,13 +525,13 @@ export default function VizagStatsView() {
                                                     </tr>
                                                     {expandedRow === issue.id && (
                                                         <tr>
-                                                            <td colSpan={6} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
+                                                            <td colSpan={7} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-base">
                                                                     {/* AI Analysis Summary */}
                                                                     {issue.evidence && issue.evidence !== 'None' && (
                                                                         <div className="col-span-full">
                                                                             <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>AI Analysis Summary:</span>
-                                                                            <p className={`${isDarkMode ? 'text-gray-300 bg-blue-500/10' : 'text-gray-800 bg-blue-50'} mt-1 p-3 rounded-lg border ${isDarkMode ? 'border-blue-500/20' : 'border-blue-200'}`}>
+                                                                            <p className={`${isDarkMode ? 'text-gray-300 bg-blue-500/10' : 'text-gray-800 bg-blue-50'} mt-1 p-3 rounded-lg border ${isDarkMode ? 'border-blue-500/20' : 'border-blue-200'} whitespace-pre-wrap`}>
                                                                                 {issue.evidence}
                                                                             </p>
                                                                         </div>
@@ -651,7 +613,7 @@ export default function VizagStatsView() {
                                         {/* Infinite scroll observer */}
                                         {visibleCount < filteredIssues.length && (
                                             <tr ref={observerRef}>
-                                                <td colSpan={6} className="h-4"></td>
+                                                <td colSpan={7} className="h-4"></td>
                                             </tr>
                                         )}
                                     </tbody>
@@ -663,32 +625,34 @@ export default function VizagStatsView() {
             </div>
 
             {/* Image Modal */}
-            {selectedImage && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-                    onClick={() => setSelectedImage(null)}
-                    style={{ overflow: 'hidden' }}
-                >
-                    <button
+            {
+                selectedImage && (
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
                         onClick={() => setSelectedImage(null)}
-                        className="fixed top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-3 shadow-2xl transition-colors z-[110]"
-                        title="Close (ESC)"
+                        style={{ overflow: 'hidden' }}
                     >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="fixed top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-3 shadow-2xl transition-colors z-[110]"
+                            title="Close (ESC)"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
 
-                    <div className="relative max-w-7xl max-h-[90vh] p-4">
-                        <img
-                            src={selectedImage}
-                            alt="Enlarged view"
-                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
+                        <div className="relative max-w-7xl max-h-[90vh] p-4">
+                            <img
+                                src={selectedImage}
+                                alt="Enlarged view"
+                                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

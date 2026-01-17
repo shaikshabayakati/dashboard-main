@@ -54,6 +54,14 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                         )}
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
+                        {issue.severity && (
+                            <span className={`text-xs px-2 py-0.5 rounded font-semibold uppercase tracking-wider ${issue.severity.toLowerCase().includes('high') ? 'bg-red-100 text-red-700' :
+                                issue.severity.toLowerCase().includes('medium') ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-green-100 text-green-700'
+                                }`}>
+                                {issue.severity}
+                            </span>
+                        )}
                         {issue.isAuthentic && (
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
                                 ✓ Verified
@@ -71,7 +79,7 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                 {issue.evidence && issue.evidence !== 'None' && issue.evidence.trim() !== '' && (
                     <div className="bg-blue-50 border-l-2 border-blue-500 p-2 rounded mb-2">
                         <div className="text-xs font-semibold text-blue-900 mb-1">🤖 AI Analysis</div>
-                        <div className="text-xs text-gray-700 line-clamp-2">
+                        <div className="text-xs text-gray-700 line-clamp-2 whitespace-pre-wrap">
                             {issue.evidence}
                         </div>
                     </div>
@@ -113,7 +121,7 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                         {issue.evidence && issue.evidence !== 'None' && issue.evidence.trim() !== '' && (
                             <div className="bg-blue-50 p-2 rounded">
                                 <div className="text-xs font-semibold text-blue-900 mb-1">Full AI Analysis</div>
-                                <div className="text-xs text-gray-700">
+                                <div className="text-xs text-gray-700 whitespace-pre-wrap">
                                     {issue.evidence}
                                 </div>
                             </div>
@@ -139,19 +147,7 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                             </div>
                         )}
 
-                        {/* Safety Status */}
-                        <div className="flex items-center space-x-2 text-xs flex-wrap gap-1">
-                            {issue.isInfrastructureSafe && (
-                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
-                                    ✓ Infrastructure Safe
-                                </span>
-                            )}
-                            {!issue.isInfrastructureSafe && (
-                                <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">
-                                    ⚠️ Safety Concern
-                                </span>
-                            )}
-                        </div>
+
 
                         {/* Reporter Contact */}
                         {issue.userPhone && (

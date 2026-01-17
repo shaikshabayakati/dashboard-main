@@ -9,6 +9,14 @@ interface VizagSidebarProps {
     showIssuesSidebar: boolean;
 }
 
+const COLORS: Record<string, string> = {
+    'Road': '#DC2626',
+    'Footpath': '#3B82F6',
+    'Electricity': '#F59E0B',
+    'Garbage/sewage': '#EA580C',
+    'Stray animals': '#8B5CF6'
+};
+
 const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, showIssuesSidebar }) => {
     const [selectedWard, setSelectedWard] = useState<number | null>(null);
     const [selectedZone, setSelectedZone] = useState<string | null>(null);
@@ -61,12 +69,12 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
 
     return (
         <div
-            className={`absolute top-0 left-0 h-full bg-white shadow-xl z-40 flex flex-col border-r border-gray-200 transition-all duration-300 ${showIssuesSidebar ? 'w-80' : 'w-96'
+            className={`absolute top-0 left-0 h-full bg-white shadow-xl z-40 flex flex-col border-r border-gray-200 transition-all duration-300 ${showIssuesSidebar ? 'w-72' : 'w-80'
                 }`}
         >
             {/* Header */}
-            <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-1">
                     <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect width="384" height="21.3334" fill="#F97316" />
                         <path d="M0 128H128V256L0 128Z" fill="#F97316" />
@@ -84,7 +92,7 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
 
 
             {/* Filters */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {/* Ward Filter */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -134,10 +142,11 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
                     >
                         <option value="">All Types</option>
-                        <option value="Open Manhole">🕳️ Open Manhole ({stats.byType['Open Manhole'] || 0})</option>
-                        <option value="Sewage">💧 Sewage ({stats.byType['Sewage'] || 0})</option>
-                        <option value="Garbage">🗑️ Garbage ({stats.byType['Garbage'] || 0})</option>
-                        <option value="Sidewalk Encroachment">🚧 Sidewalk Encroachment ({stats.byType['Sidewalk Encroachment'] || 0})</option>
+                        <option value="Road">🛣️ Road ({stats.byType['Road'] || 0})</option>
+                        <option value="Footpath">🚶 Footpath ({stats.byType['Footpath'] || 0})</option>
+                        <option value="Electricity">⚡ Electricity ({stats.byType['Electricity'] || 0})</option>
+                        <option value="Garbage/sewage">🗑️ Garbage/Sewage ({stats.byType['Garbage/sewage'] || 0})</option>
+                        <option value="Stray animals">🐕 Stray Animals ({stats.byType['Stray animals'] || 0})</option>
                         <option value="None">❓ Unknown ({stats.byType['None'] || 0})</option>
                     </select>
                 </div>
@@ -153,12 +162,18 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                 )}
 
                 {/* Issue Type Breakdown */}
-                <div className="pt-4 border-t border-gray-200">
-                    <div className="text-sm font-medium text-gray-700 mb-3">Issue Type Breakdown</div>
-                    <div className="space-y-2">
+                <div className="pt-3 border-t border-gray-200">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Breakdown</div>
+                    <div className="space-y-1.5">
                         {Object.entries(stats.byType).map(([type, count]) => (
                             <div key={type} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600 truncate flex-1">{type}</span>
+                                <div className="flex items-center gap-2 truncate flex-1">
+                                    <div
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: COLORS[type] || '#CBD5E1' }}
+                                    ></div>
+                                    <span className="text-gray-600 truncate">{type}</span>
+                                </div>
                                 <span className="font-semibold text-gray-900 ml-2">{count}</span>
                             </div>
                         ))}

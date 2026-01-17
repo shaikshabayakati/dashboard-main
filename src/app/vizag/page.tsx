@@ -28,14 +28,17 @@ const MiniMapView = dynamic(() => import('@/components/MiniMapView'), {
 });
 
 const COLORS = {
-    'Open Manhole': '#EF4444',
-    'Sewage': '#F97316',
-    'Garbage': '#EAB308',
-    'Sidewalk Encroachment': '#F97316',
+    'Road': '#EF4444',
+    'Footpath': '#3B82F6',
+    'Electricity': '#EAB308',
+    'Garbage/sewage': '#F97316',
+    'Stray animals': '#8B5CF6',
     'verified': '#10B981',
     'unverified': '#F59E0B',
-    'safe': '#F97316',
-    'unsafe': '#EF4444'
+    'high': '#DC2626',
+    'medium': '#F59E0B',
+    'low': '#10B981',
+    'unknown': '#94A3B8'
 };
 
 export default function VizagDashboard() {
@@ -52,7 +55,7 @@ export default function VizagDashboard() {
             return issueDate.getTime() === today.getTime();
         });
 
-        const criticalIssues = issues.filter(i => !i.isInfrastructureSafe || !i.isAuthentic);
+        const criticalIssues = issues.filter(i => !i.isAuthentic);
 
         // Calculate weekly reports (last 7 days)
         const weekAgo = new Date();
@@ -159,11 +162,25 @@ export default function VizagDashboard() {
         { name: 'Verified', value: issues.filter(i => i.isAuthentic).length },
         { name: 'Unverified', value: issues.filter(i => !i.isAuthentic).length }
     ], [issues]);
+    const severityData = useMemo(() => {
+        const counts = issues.reduce((acc, i) => {
+            const s = (i.severity || 'unknown').toLowerCase();
+            let key = 'unknown';
+            if (s.includes('high')) key = 'high';
+            else if (s.includes('medium')) key = 'medium';
+            else if (s.includes('low')) key = 'low';
 
-    const safetyData = useMemo(() => [
-        { name: 'Safe', value: issues.filter(i => i.isInfrastructureSafe).length },
-        { name: 'Safety Concern', value: issues.filter(i => !i.isInfrastructureSafe).length }
-    ], [issues]);
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return [
+            { name: 'High', value: counts['high'] || 0, color: COLORS.high },
+            { name: 'Medium', value: counts['medium'] || 0, color: COLORS.medium },
+            { name: 'Low', value: counts['low'] || 0, color: COLORS.low }
+        ].filter(d => d.value > 0);
+    }, [issues]);
+
 
     // Recent issues for preview
     const recentIssues = useMemo(() =>
@@ -230,7 +247,7 @@ export default function VizagDashboard() {
                             <h2 className="text-base font-semibold text-gray-900">Map View</h2>
                             <Link
                                 href="/vizag/map"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-rgb(249,115,22) text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
                             >
                                 Full View
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,13 +445,13 @@ export default function VizagDashboard() {
                         </ResponsiveContainer>
                     </div>
 
-                    {/* Safety Status */}
+                    {/* Severity Distribution */}
                     <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Safety Assessment</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Severity Distribution</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
-                                    data={safetyData}
+                                    data={severityData}
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={60}
@@ -443,10 +460,12 @@ export default function VizagDashboard() {
                                     dataKey="value"
                                     label={(entry) => `${entry.name}: ${entry.value}`}
                                 >
-                                    <Cell fill={COLORS.safe} />
-                                    <Cell fill={COLORS.unsafe} />
+                                    {severityData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
                                 </Pie>
                                 <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>

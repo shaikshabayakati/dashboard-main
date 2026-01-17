@@ -28,6 +28,14 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                         <span className="font-bold text-lg">
                             {issue.primaryIssue || 'Unknown Issue'}
                         </span>
+                        {issue.severity && (
+                            <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider ${issue.severity.toLowerCase().includes('high') ? 'bg-red-600/90 text-white' :
+                                issue.severity.toLowerCase().includes('medium') ? 'bg-yellow-500/90 text-black' :
+                                    'bg-green-600/90 text-white'
+                                }`}>
+                                {issue.severity}
+                            </span>
+                        )}
                         {!issue.isAuthentic && (
                             <span className="text-xs bg-red-500/80 px-2 py-0.5 rounded font-semibold">
                                 ⚠ Not Verified
@@ -95,7 +103,7 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                             </svg>
                             AI Analysis Summary
                         </div>
-                        <div className="text-sm text-gray-700 leading-relaxed">
+                        <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                             {issue.evidence}
                         </div>
                     </div>
@@ -125,16 +133,6 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                     {!issue.isIssuePresent && (
                         <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded font-medium">
                             No Issue Found
-                        </span>
-                    )}
-                    {issue.isInfrastructureSafe && (
-                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
-                            ✓ Infrastructure Safe
-                        </span>
-                    )}
-                    {!issue.isInfrastructureSafe && (
-                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
-                            ⚠️ Safety Concern
                         </span>
                     )}
                 </div>

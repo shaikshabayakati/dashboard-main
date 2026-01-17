@@ -2,10 +2,11 @@
 
 // Enum types based on database constraints
 export type PrimaryIssueType =
-    | 'Open Manhole'
-    | 'Sewage'
-    | 'Garbage'
-    | 'Sidewalk Encroachment'
+    | 'Road'
+    | 'Footpath'
+    | 'Electricity'
+    | 'Garbage/sewage'
+    | 'Stray animals'
     | 'None';
 
 export type SubCategoryType =
@@ -35,7 +36,7 @@ export interface DatabaseGeneralIssue {
     primary_issue: PrimaryIssueType | null;
     sub_category: SubCategoryType | null;
     evidence: string | null;
-    is_infrastructure_safe: boolean;
+
     next_step: NextStep | null;
     user_phone: string | null;
     image_url: string | null;
@@ -45,6 +46,7 @@ export interface DatabaseGeneralIssue {
     ward_number: number | null;
     zone: string | null;
     corporator_name_address: string | null;
+    severity: string | null;
 }
 
 // Frontend interface (camelCase for React components)
@@ -62,7 +64,7 @@ export interface GeneralIssue {
     primaryIssue: PrimaryIssueType | null;
     subCategory: SubCategoryType | null;
     evidence: string | null;
-    isInfrastructureSafe: boolean;
+
     nextStep: NextStep | null;
     userPhone: string | null;
     imageUrl: string | null;
@@ -72,4 +74,5 @@ export interface GeneralIssue {
     wardNumber: number | null;
     zone: string | null;
     corporatorNameAddress: string | null;
+    severity: string | null;
 }
