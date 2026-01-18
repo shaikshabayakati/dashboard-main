@@ -54,14 +54,7 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                         )}
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                        {issue.severity && (
-                            <span className={`text-xs px-2 py-0.5 rounded font-semibold uppercase tracking-wider ${issue.severity.toLowerCase().includes('high') ? 'bg-red-100 text-red-700' :
-                                issue.severity.toLowerCase().includes('medium') ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-green-100 text-green-700'
-                                }`}>
-                                {issue.severity}
-                            </span>
-                        )}
+
                         {issue.isAuthentic && (
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
                                 ✓ Verified
@@ -98,9 +91,13 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
                         {getZoneLabel(issue.zone)}
                     </span>
-                    {issue.isIssuePresent && (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
-                            ⚠ Confirmed
+
+                    {issue.severity && (
+                        <span className={`text-xs px-2 py-0.5 rounded font-semibold uppercase tracking-wider ${issue.severity.toLowerCase().includes('high') ? 'bg-red-600 text-white' :
+                            issue.severity.toLowerCase().includes('medium') ? 'bg-amber-500 text-white' :
+                                'bg-emerald-600 text-white'
+                            }`}>
+                            {issue.severity}
                         </span>
                     )}
                 </div>

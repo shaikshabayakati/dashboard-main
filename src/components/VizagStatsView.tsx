@@ -15,10 +15,11 @@ export default function VizagStatsView() {
     const [locationFilter, setLocationFilter] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [severityFilter, setSeverityFilter] = useState<string>('all');
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
     // Sort states
-    type SortColumn = 'datetime' | 'issueType';
+    type SortColumn = 'datetime' | 'issueType' | 'severity';
     type SortOrder = 'asc' | 'desc';
     const [sortColumn, setSortColumn] = useState<SortColumn>('datetime');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -32,7 +33,7 @@ export default function VizagStatsView() {
     // Reset pagination when filters change
     React.useEffect(() => {
         setVisibleCount(10);
-    }, [issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
+    }, [issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, severityFilter, sortColumn, sortOrder]);
 
     // Calculate stats for filters
     const stats = useMemo(() => {
@@ -102,6 +103,11 @@ export default function VizagStatsView() {
             filtered = filtered.filter(i => i.createdAt ? new Date(i.createdAt) <= end : true);
         }
 
+        // Severity filter
+        if (severityFilter !== 'all') {
+            filtered = filtered.filter(i => (i.severity || '').toLowerCase() === severityFilter.toLowerCase());
+        }
+
         // Sort
         filtered.sort((a, b) => {
             let comparison = 0;
@@ -110,6 +116,15 @@ export default function VizagStatsView() {
                 comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
             } else if (sortColumn === 'issueType') {
                 comparison = (a.primaryIssue || '').localeCompare(b.primaryIssue || '');
+            } else if (sortColumn === 'severity') {
+                const getSeverityScore = (severity: string | null) => {
+                    const s = (severity || '').toLowerCase();
+                    if (s.includes('high')) return 3;
+                    if (s.includes('medium')) return 2;
+                    if (s.includes('low')) return 1;
+                    return 0;
+                };
+                comparison = getSeverityScore(a.severity) - getSeverityScore(b.severity);
             }
 
             return sortOrder === 'asc' ? comparison : -comparison;
@@ -340,12 +355,28 @@ export default function VizagStatsView() {
                                 setLocationFilter('');
                                 setStartDate('');
                                 setEndDate('');
+                                setSeverityFilter('all');
                             }}
                             className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                         >
                             Clear Filters
                         </button>
                     )}
+
+                    {/* Severity Filter in Sidebar */}
+                    <div>
+                        <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Severity</label>
+                        <select
+                            value={severityFilter}
+                            onChange={(e) => setSeverityFilter(e.target.value)}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                        >
+                            <option value="all">All Severities</option>
+                            <option value="high">🔴 High</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="low">🟢 Low</option>
+                        </select>
+                    </div>
 
                     <div className={`text-sm ${isDarkMode ? 'text-gray-400 border-gray-800' : 'text-gray-600 border-gray-200'} pt-2 border-t font-medium`}>
                         Showing {filteredIssues.length} of {issues.length} issues
@@ -438,8 +469,14 @@ export default function VizagStatsView() {
                                             <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[12%]`}>
                                                 Status
                                             </th>
-                                            <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[12%]`}>
-                                                Severity
+                                            <th
+                                                className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors w-[12%]`}
+                                                onClick={() => handleSort('severity')}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    Severity
+                                                    {getSortIcon('severity')}
+                                                </div>
                                             </th>
                                             <th className="px-4 py-3 w-[5%]"></th>
                                         </tr>

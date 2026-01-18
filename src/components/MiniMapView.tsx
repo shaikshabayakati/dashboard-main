@@ -42,19 +42,26 @@ const MiniMapView: React.FC<MiniMapViewProps> = ({ issues }) => {
     );
 
     // Prepare heatmap data
-    const heatmapData = useMemo(() => {
-        if (!isLoaded || !window.google || validIssues.length === 0) return [];
+    const [heatmapPoints, setHeatmapPoints] = React.useState<google.maps.visualization.WeightedLocation[]>([]);
 
-        return validIssues.map(issue => ({
-            location: new google.maps.LatLng(issue.latitude!, issue.longitude!),
-            weight: 1
-        }));
-    }, [validIssues, isLoaded]);
+    React.useEffect(() => {
+        if (isLoaded && window.google && validIssues.length > 0) {
+            try {
+                const points = validIssues.map(issue => ({
+                    location: new google.maps.LatLng(issue.latitude!, issue.longitude!),
+                    weight: 1
+                }));
+                setHeatmapPoints(points);
+            } catch (err) {
+                console.error("Error creating heatmap points:", err);
+            }
+        }
+    }, [isLoaded, validIssues]);
 
     if (!isLoaded) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                <div className="text-gray-500 text-sm animate-pulse">Loading map...</div>
+            <div className="w-full h-full flex items-center justify-center bg-gray-50 animate-pulse">
+                <div className="text-gray-400 text-sm font-medium">Initializing Map...</div>
             </div>
         );
     }
@@ -67,32 +74,18 @@ const MiniMapView: React.FC<MiniMapViewProps> = ({ issues }) => {
             options={mapOptions}
         >
             {/* Heatmap Layer */}
-            {heatmapData.length > 0 && (
+            {heatmapPoints.length > 0 && (
                 <HeatmapLayer
-                    data={heatmapData}
+                    data={heatmapPoints}
                     options={{
-                        radius: 30,
+                        radius: 40,
                         opacity: 0.8,
-                        dissipating: true,
-                        gradient: [
-                            'rgba(0, 255, 255, 0)',
-                            'rgba(0, 255, 255, 1)',
-                            'rgba(0, 191, 255, 1)',
-                            'rgba(0, 127, 255, 1)',
-                            'rgba(0, 63, 255, 1)',
-                            'rgba(0, 0, 255, 1)',
-                            'rgba(0, 0, 223, 1)',
-                            'rgba(0, 0, 191, 1)',
-                            'rgba(0, 0, 159, 1)',
-                            'rgba(0, 0, 127, 1)',
-                            'rgba(63, 0, 91, 1)',
-                            'rgba(127, 0, 63, 1)',
-                            'rgba(191, 0, 31, 1)',
-                            'rgba(255, 0, 0, 1)'
-                        ]
+                        dissipating: true
                     }}
                 />
             )}
+
+
         </GoogleMap>
     );
 };

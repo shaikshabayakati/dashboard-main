@@ -42,6 +42,14 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
             }
         });
 
+        // Filter out 'None' or 'Unknown' categories from stats
+        ['None', 'Unknown', 'none', 'unknown'].forEach(key => {
+            delete byType[key];
+            delete byZone[key];
+            // @ts-ignore
+            delete byWard[key];
+        });
+
         return { total, byType, byZone, byWard };
     }, [issues]);
 
@@ -147,7 +155,6 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                         <option value="Electricity">⚡ Electricity ({stats.byType['Electricity'] || 0})</option>
                         <option value="Garbage/sewage">🗑️ Garbage/Sewage ({stats.byType['Garbage/sewage'] || 0})</option>
                         <option value="Stray animals">🐕 Stray Animals ({stats.byType['Stray animals'] || 0})</option>
-                        <option value="None">❓ Unknown ({stats.byType['None'] || 0})</option>
                     </select>
                 </div>
 

@@ -13,7 +13,7 @@ interface GeneralIssuesSidebarProps {
     isVisible: boolean;
 }
 
-type SortOption = 'recent' | 'oldest' | 'issue-type';
+type SortOption = 'recent' | 'oldest' | 'severity-desc' | 'severity-asc';
 type IssueTypeFilter = 'all' | PrimaryIssueType;
 
 const GeneralIssuesSidebar: React.FC<GeneralIssuesSidebarProps> = ({
@@ -38,27 +38,32 @@ const GeneralIssuesSidebar: React.FC<GeneralIssuesSidebarProps> = ({
     const filteredAndSortedIssues = useMemo(() => {
         let filtered = [...issues];
 
-        // Apply issue type filter
-        if (issueTypeFilter !== 'all') {
-            filtered = filtered.filter(i => i.primaryIssue === issueTypeFilter);
-        }
-
         // Apply sorting
         filtered.sort((a, b) => {
+            const getSeverityScore = (severity: string | null) => {
+                const s = (severity || '').toLowerCase();
+                if (s.includes('high')) return 3;
+                if (s.includes('medium')) return 2;
+                if (s.includes('low')) return 1;
+                return 0;
+            };
+
             switch (sortBy) {
                 case 'recent':
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                 case 'oldest':
                     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                case 'issue-type':
-                    return (a.primaryIssue || '').localeCompare(b.primaryIssue || '');
+                case 'severity-desc':
+                    return getSeverityScore(b.severity) - getSeverityScore(a.severity);
+                case 'severity-asc':
+                    return getSeverityScore(a.severity) - getSeverityScore(b.severity);
                 default:
                     return 0;
             }
         });
 
         return filtered;
-    }, [issues, sortBy, issueTypeFilter]);
+    }, [issues, sortBy]);
 
     // Infinite scroll logic
     const loadMore = useCallback(() => {
@@ -153,27 +158,12 @@ const GeneralIssuesSidebar: React.FC<GeneralIssuesSidebarProps> = ({
                         >
                             <option value="recent">📅 Most Recent</option>
                             <option value="oldest">⏰ Oldest First</option>
-                            <option value="issue-type">🏷️ Issue Type</option>
+                            <option value="severity-desc">🔥 Severity (High to Low)</option>
+                            <option value="severity-asc">🧊 Severity (Low to High)</option>
                         </select>
                     </div>
 
-                    <div>
-                        <label className="flex items-center text-xs font-medium text-gray-700 mb-2">
-                            Issue Type Filter
-                        </label>
-                        <select
-                            value={issueTypeFilter}
-                            onChange={(e) => setIssueTypeFilter(e.target.value as IssueTypeFilter)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-all duration-200"
-                        >
-                            <option value="all">All Types</option>
-                            <option value="Open Manhole">🕳️ Open Manhole</option>
-                            <option value="Sewage">💧 Sewage</option>
-                            <option value="Garbage">🗑️ Garbage</option>
-                            <option value="Sidewalk Encroachment">🚧 Sidewalk Encroachment</option>
-                            <option value="None">❓ Unknown</option>
-                        </select>
-                    </div>
+
                 </div>
 
                 {/* Issues List */}
