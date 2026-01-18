@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import ClientOnly from '@/components/ClientOnly';
 import VizagSidebar from '@/components/VizagSidebar';
 import GeneralIssuesSidebar from '@/components/GeneralIssuesSidebar';
-import { useGeneralIssues } from '@/hooks/useGeneralIssues';
+import { useCombinedIssues } from '@/hooks/useCombinedIssues';
 import { PrimaryIssueType } from '@/types/GeneralIssue';
 import { Outfit } from 'next/font/google';
 
@@ -36,8 +36,8 @@ export default function VizagMapPage() {
     });
     const [showIssuesSidebar, setShowIssuesSidebar] = useState(false);
 
-    // Use custom hook to fetch general issues
-    const { issues, isLoading: loading, error } = useGeneralIssues();
+    // Use custom hook to fetch combined issues (general issues + pothole reports)
+    const { issues, isLoading: loading, error } = useCombinedIssues();
 
     // Filter issues based on selected ward, zone, and issue type
     const filteredIssues = useMemo(() => {

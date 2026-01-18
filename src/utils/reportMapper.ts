@@ -157,3 +157,80 @@ export function mapDatabaseReportsToFrontend(dbReports: DatabasePotholeReport[])
     .filter(report => report.detection_count > 0) // Only include reports with detections
     .map(mapDatabaseToFrontend);
 }
+
+/**
+ * Maps a pothole report to GeneralIssue format for unified dashboard display
+ * This allows pothole reports to be displayed alongside general issues in the Vizag dashboard
+ */
+export function mapPotholeReportToGeneralIssue(dbReport: DatabasePotholeReport): any {
+  // Only include confirmed potholes with detections
+  if (!dbReport.is_pothole || dbReport.detection_count === 0) {
+    return null;
+  }
+
+  // Extract district and mandal
+  const { district, mandal } = extractLocationInfo(dbReport);
+
+  // Create evidence string with pothole-specific details
+  const confidence = Math.round((dbReport.confidence ?? 0) * 100);
+  const evidenceParts = [
+    `Pothole detected with ${confidence}% confidence.`,
+    `Detection count: ${dbReport.detection_count}.`,
+  ];
+
+  if (dbReport.impact_score) {
+    evidenceParts.push(`Impact score: ${dbReport.impact_score.toFixed(2)}.`);
+  }
+  if (dbReport.road_name) {
+    evidenceParts.push(`Road: ${dbReport.road_name}.`);
+  }
+  if (dbReport.road_type) {
+    evidenceParts.push(`Road type: ${dbReport.road_type}.`);
+  }
+
+  const evidence = evidenceParts.join(' ');
+
+  // Use corporator_name_address if available, otherwise construct from individual fields
+  let corporatorInfo = dbReport.corporator_name_address;
+  if (!corporatorInfo && dbReport.corporator_name) {
+    corporatorInfo = dbReport.corporator_name;
+    if (dbReport.corporator_address) {
+      corporatorInfo = `${dbReport.corporator_name}, ${dbReport.corporator_address}`;
+    }
+  }
+
+  return {
+    id: dbReport.id,
+    address: dbReport.address || 'Location not available',
+    latitude: dbReport.latitude,
+    longitude: dbReport.longitude,
+    lat: dbReport.latitude,
+    lng: dbReport.longitude,
+    isAuthentic: true, // Potholes are ML-verified
+    rejectionReason: null,
+    isIssuePresent: true,
+    primaryIssue: 'Road' as const,
+    subCategory: 'Potholes' as const,
+    evidence: evidence,
+    nextStep: null,
+    userPhone: dbReport.user_phone,
+    imageUrl: dbReport.image_url,
+    imagePath: null,
+    createdAt: dbReport.created_at,
+    updatedAt: dbReport.created_at,
+    wardNumber: dbReport.ward_number,
+    zone: dbReport.zone,
+    corporatorNameAddress: corporatorInfo,
+    severity: dbReport.severity || 'Medium',
+  };
+}
+
+/**
+ * Batch map pothole reports to general issue format
+ */
+export function mapPotholeReportsToGeneralIssues(dbReports: DatabasePotholeReport[]): any[] {
+  return dbReports
+    .map(mapPotholeReportToGeneralIssue)
+    .filter(issue => issue !== null);
+}
+

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useGeneralIssues } from '@/hooks/useGeneralIssues';
+import { useCombinedIssues } from '@/hooks/useCombinedIssues';
 import { GeneralIssue } from '@/types/GeneralIssue';
 import {
     BarChart,
@@ -45,7 +45,7 @@ const COLORS = {
 };
 
 export default function VizagDashboard() {
-    const { issues, isLoading, error } = useGeneralIssues();
+    const { issues, isLoading, error } = useCombinedIssues();
 
     // Calculate KPIs
     const kpis = useMemo(() => {
@@ -284,6 +284,11 @@ export default function VizagDashboard() {
                                         <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-orange-50 text-orange-600 border border-orange-100">
                                             {issue.primaryIssue || 'Unknown'}
                                         </span>
+                                        {issue.subCategory === 'Potholes' && (
+                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-red-500/10 text-red-600 border border-red-400/20">
+                                                🕳️ Pothole
+                                            </span>
+                                        )}
                                         <span className="text-xs text-gray-500">
                                             Ward {issue.wardNumber || 'N/A'}
                                         </span>

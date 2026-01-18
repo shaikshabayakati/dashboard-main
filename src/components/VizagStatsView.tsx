@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { useGeneralIssues } from '@/hooks/useGeneralIssues';
+import { useCombinedIssues } from '@/hooks/useCombinedIssues';
 import { GeneralIssue, PrimaryIssueType, SubCategoryType } from '@/types/GeneralIssue';
 import { Outfit } from 'next/font/google';
 
 const outfit = Outfit({ subsets: ['latin'] });
 
 export default function VizagStatsView() {
-    const { issues, isLoading, error } = useGeneralIssues();
+    const { issues, isLoading, error } = useCombinedIssues();
 
     // Filter states
     const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
@@ -516,10 +516,17 @@ export default function VizagStatsView() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getIssueTypeColor(issue.primaryIssue)}`}>
-                                                                {issue.primaryIssue || 'Unknown'}
-                                                            </span>
-                                                            {issue.subCategory && issue.subCategory !== 'None' && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getIssueTypeColor(issue.primaryIssue)}`}>
+                                                                    {issue.primaryIssue || 'Unknown'}
+                                                                </span>
+                                                                {issue.subCategory === 'Potholes' && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-400/20">
+                                                                        🕳️ Pothole
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {issue.subCategory && issue.subCategory !== 'None' && issue.subCategory !== 'Potholes' && (
                                                                 <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
                                                                     {issue.subCategory}
                                                                 </div>
@@ -582,10 +589,26 @@ export default function VizagStatsView() {
                                                                         <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{issue.address || 'N/A'}</p>
                                                                     </div>
 
+                                                                    <div>
+                                                                        <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Ward Number:</span>
+                                                                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-semibold`}>
+                                                                            {issue.wardNumber ? `Ward ${issue.wardNumber}` : 'N/A'}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Zone:</span>
+                                                                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1 font-semibold`}>
+                                                                            {issue.zone ? `Zone ${issue.zone}` : 'N/A'}
+                                                                        </p>
+                                                                    </div>
+
                                                                     {issue.corporatorNameAddress && (
-                                                                        <div>
-                                                                            <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Corporator:</span>
-                                                                            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{issue.corporatorNameAddress}</p>
+                                                                        <div className="col-span-full">
+                                                                            <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Corporator Details:</span>
+                                                                            <p className={`${isDarkMode ? 'text-gray-300 bg-purple-500/10' : 'text-gray-800 bg-purple-50'} mt-1 p-3 rounded-lg border ${isDarkMode ? 'border-purple-500/20' : 'border-purple-200'}`}>
+                                                                                {issue.corporatorNameAddress}
+                                                                            </p>
                                                                         </div>
                                                                     )}
 

@@ -12,6 +12,8 @@ export type PrimaryIssueType =
 export type SubCategoryType =
     | 'Domestic'
     | 'Construction'
+    | 'Potholes'
+    | 'Manholes'
     | 'None';
 
 export type RejectionReasonType =

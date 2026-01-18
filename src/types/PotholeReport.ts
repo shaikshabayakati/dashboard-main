@@ -50,6 +50,14 @@ export interface DatabasePotholeReport {
   } | null;
   severity_score_weighted: number | null;
   traffic_score_normalized: number | null;
+  ward_number: number | null;
+  zone: string | null;
+  corporator_name_address: string | null;
+  corporator_name: string | null;
+  corporator_party: string | null;
+  corporator_address: string | null;
+  primary_issue: string | null;
+  sub_category: string | null;
 }
 
 // Frontend display schema - this is what the UI expects
