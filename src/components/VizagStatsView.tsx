@@ -3,6 +3,9 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useGeneralIssues } from '@/hooks/useGeneralIssues';
 import { GeneralIssue, PrimaryIssueType, SubCategoryType } from '@/types/GeneralIssue';
+import { Outfit } from 'next/font/google';
+
+const outfit = Outfit({ subsets: ['latin'] });
 
 export default function VizagStatsView() {
     const { issues, isLoading, error } = useGeneralIssues();
@@ -233,7 +236,7 @@ export default function VizagStatsView() {
     }
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0b0d] text-white' : 'bg-gray-50 text-gray-900'} flex`}>
+        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0b0d] text-white' : 'bg-gray-50 text-gray-900'} flex ${outfit.className}`}>
             {/* Collapsible Filter Sidebar */}
             <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} border-r transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden flex-shrink-0`}>
                 <div className={`p-4 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-b flex items-center justify-between`}>

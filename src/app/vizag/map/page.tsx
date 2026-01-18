@@ -7,6 +7,9 @@ import VizagSidebar from '@/components/VizagSidebar';
 import GeneralIssuesSidebar from '@/components/GeneralIssuesSidebar';
 import { useGeneralIssues } from '@/hooks/useGeneralIssues';
 import { PrimaryIssueType } from '@/types/GeneralIssue';
+import { Outfit } from 'next/font/google';
+
+const outfit = Outfit({ subsets: ['latin'] });
 
 // Dynamically import VizagMapView to prevent SSR issues
 const VizagMapView = dynamic(() => import('@/components/VizagMapView'), {
@@ -71,7 +74,7 @@ export default function VizagMapPage() {
 
     if (loading) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+            <div className={`h-screen w-screen flex items-center justify-center bg-gray-50 ${outfit.className}`}>
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <div className="text-gray-600 font-medium">Loading Visakhapatnam Map...</div>
@@ -82,7 +85,7 @@ export default function VizagMapPage() {
 
     if (error) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+            <div className={`h-screen w-screen flex items-center justify-center bg-gray-50 ${outfit.className}`}>
                 <div className="text-center max-w-md">
                     <div className="text-red-600 text-xl font-bold mb-2">Error Loading Map</div>
                     <div className="text-gray-600">{error}</div>
@@ -98,10 +101,10 @@ export default function VizagMapPage() {
     }
 
     return (
-        <div className="h-screen w-screen bg-gray-50 relative">
+        <div className={`h-screen w-screen bg-gray-50 relative ${outfit.className}`}>
             <ClientOnly
                 fallback={
-                    <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+                    <div className={`h-screen w-screen flex items-center justify-center bg-gray-50 ${outfit.className}`}>
                         <div className="text-gray-600">Initializing map...</div>
                     </div>
                 }
