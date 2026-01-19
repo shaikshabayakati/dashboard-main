@@ -51,8 +51,6 @@ export interface DatabaseGeneralIssue {
     severity: string | null;
     confidence: number | null;
     impact_score: number | null;
-    district: string | null;
-    mandal: string | null;
 }
 
 // Frontend interface (camelCase for React components)
@@ -83,6 +81,4 @@ export interface GeneralIssue {
     severity: string | null;
     confidence: number | null;
     impactScore: number | null;
-    district: string | null;
-    mandal: string | null;
 }

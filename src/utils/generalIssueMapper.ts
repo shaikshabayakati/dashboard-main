@@ -53,8 +53,6 @@ export function mapDatabaseGeneralIssuesToFrontend(
                 severity: dbIssue.severity,
                 confidence: dbIssue.confidence,
                 impactScore: dbIssue.impact_score !== null && dbIssue.impact_score !== undefined ? Number(dbIssue.impact_score) : null,
-                district: dbIssue.district,
-                mandal: dbIssue.mandal,
             };
         });
 }

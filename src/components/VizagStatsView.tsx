@@ -473,7 +473,7 @@ export default function VizagStatsView() {
                             <path d="M128 384V512H256L128 384Z" fill="#F97316" />
                         </svg>
                         <div>
-                            <h1 className="text-xl font-bold">Andhra Pradesh Issues Analytics</h1>
+                            <h1 className="text-xl font-bold">Visakhapatnam Issues Analytics</h1>
                             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Overview of general issues</p>
                         </div>
                     </div>
