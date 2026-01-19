@@ -15,6 +15,8 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
     const color = getPriorityColor(issue.primaryIssue as any);
     const [showAllDetails, setShowAllDetails] = useState(false); // Default to collapsed
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [isAddressExpanded, setIsAddressExpanded] = useState(false);
+    const [isCorporatorExpanded, setIsCorporatorExpanded] = useState(false);
 
     return (
         <div className="bg-white rounded-lg shadow-lg overflow-hidden max-w-sm">
@@ -99,13 +101,59 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                         <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                             {issue.evidence}
                         </div>
+                        {/* Impact Index inside summary block - ONLY for Potholes */}
+                        {issue.subCategory === 'Potholes' && (
+                            <div className="mt-3 pt-3 border-t border-blue-200 flex items-start justify-between">
+                                <div className="flex items-center gap-1 group relative">
+                                    <span className="text-sm font-medium text-blue-900 flex items-center gap-1">
+                                        📈 Impact Index
+                                    </span>
+                                    <span className="cursor-help text-blue-400 hover:text-blue-600 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                        </svg>
+                                    </span>
+                                    {/* Tooltip */}
+                                    <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg font-normal">
+                                        <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                                        <p className="leading-relaxed">
+                                            The impact index is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-blue-900 font-bold text-sm">
+                                    {issue.impactScore !== null && issue.impactScore !== undefined
+                                        ? Number(issue.impactScore).toFixed(1)
+                                        : (issue as any).impact_score !== null && (issue as any).impact_score !== undefined
+                                            ? Number((issue as any).impact_score).toFixed(1)
+                                            : 'N/A'}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Location Info */}
                 <div>
                     <div className="text-sm font-medium text-gray-900 mb-1">📍 Location</div>
-                    <div className="text-sm text-gray-600">{issue.address}</div>
+                    <div className="relative">
+                        <div
+                            className={`text-sm text-gray-600 transition-all duration-300 ${!isAddressExpanded ? 'line-clamp-2' : ''}`}
+                        >
+                            {issue.address}
+                        </div>
+                        {issue.address && issue.address.length > 50 && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsAddressExpanded(!isAddressExpanded);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 text-xs font-semibold mt-1 flex items-center gap-1"
+                            >
+                                {isAddressExpanded ? 'Show less' : '... see more'}
+                            </button>
+                        )}
+                    </div>
                     <div className="flex items-center space-x-3 mt-2 flex-wrap gap-2">
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
                             {getWardLabel(issue.wardNumber)}
@@ -113,19 +161,15 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium">
                             {getZoneLabel(issue.zone)}
                         </span>
+                        {issue.severity && (
+                            <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${issue.severity.toLowerCase().includes('high') ? 'bg-red-600 text-white' :
+                                issue.severity.toLowerCase().includes('medium') ? 'bg-amber-500 text-white' :
+                                    'bg-emerald-600 text-white'
+                                }`}>
+                                {issue.severity}
+                            </span>
+                        )}
                     </div>
-                </div>
-
-                {/* Status Indicators - Quick View */}
-                <div className="flex items-center space-x-2 text-xs flex-wrap gap-2">
-                    {issue.severity && (
-                        <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${issue.severity.toLowerCase().includes('high') ? 'bg-red-600 text-white' :
-                            issue.severity.toLowerCase().includes('medium') ? 'bg-amber-500 text-white' :
-                                'bg-emerald-600 text-white'
-                            }`}>
-                            {issue.severity}
-                        </span>
-                    )}
                 </div>
 
                 {/* Expandable Details Section */}
@@ -144,8 +188,38 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                         {issue.corporatorNameAddress && (
                             <div>
                                 <div className="text-sm font-medium text-gray-900 mb-1">👤 Corporator</div>
-                                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                    {issue.corporatorNameAddress}
+                                <div className="bg-gray-50 p-2 rounded transition-all duration-300">
+                                    <div className="text-xs text-gray-600">
+                                        {!isCorporatorExpanded ? (
+                                            <>
+                                                {issue.corporatorNameAddress.split(',')[0]}
+                                                {issue.corporatorNameAddress.includes(',') && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setIsCorporatorExpanded(true);
+                                                        }}
+                                                        className="text-blue-600 hover:text-blue-800 font-semibold ml-1"
+                                                    >
+                                                        ... (show more)
+                                                    </button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {issue.corporatorNameAddress}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIsCorporatorExpanded(false);
+                                                    }}
+                                                    className="text-blue-600 hover:text-blue-800 font-semibold ml-2 block mt-1"
+                                                >
+                                                    show less
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}

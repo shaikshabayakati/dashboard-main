@@ -8,6 +8,8 @@ import { X, Filter, MapPin, AlertTriangle } from 'lucide-react';
 interface GeneralIssuesSidebarProps {
     wardNumber?: number;
     zoneName?: string;
+    districtName?: string;
+    mandalName?: string;
     issues: GeneralIssue[];
     onClose: () => void;
     isVisible: boolean;
@@ -19,6 +21,8 @@ type IssueTypeFilter = 'all' | PrimaryIssueType;
 const GeneralIssuesSidebar: React.FC<GeneralIssuesSidebarProps> = ({
     wardNumber,
     zoneName,
+    districtName,
+    mandalName,
     issues,
     onClose,
     isVisible
@@ -117,13 +121,17 @@ const GeneralIssuesSidebar: React.FC<GeneralIssuesSidebarProps> = ({
                     <div className="flex-1">
                         <div className="flex items-center space-x-2">
                             <MapPin className="w-4 h-4 text-blue-600" />
-                            <h2 className="text-base font-bold text-gray-900">
-                                {wardNumber ? `Ward ${wardNumber}` : zoneName ? `Zone ${zoneName}` : 'Selected Area'}
+                            <h2 className="text-base font-bold text-gray-900 truncate pr-2">
+                                {wardNumber ? `Ward ${wardNumber}` :
+                                    mandalName ? `${mandalName} Mandal` :
+                                        districtName ? `${districtName} District` :
+                                            zoneName ? `Zone ${zoneName}` : 'Selected Area'}
                             </h2>
                         </div>
-                        {wardNumber && zoneName && (
-                            <p className="text-xs text-gray-600 mt-1">
-                                Zone {zoneName}
+                        {(wardNumber || zoneName || mandalName) && (districtName || zoneName) && (
+                            <p className="text-[10px] text-gray-500 mt-0.5 truncate uppercase tracking-wider font-semibold">
+                                {mandalName && districtName ? `${districtName} District` :
+                                    wardNumber && zoneName ? `Zone ${zoneName}` : ''}
                             </p>
                         )}
                         <div className="flex items-center space-x-4 mt-1">

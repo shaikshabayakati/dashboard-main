@@ -11,6 +11,8 @@ interface VizagMapViewProps {
     issues: GeneralIssue[];
     selectedWard?: number | null;
     selectedZone?: string | null;
+    selectedDistrict?: string | null;
+    selectedMandal?: string | null;
 }
 
 const mapContainerStyle = {
@@ -59,7 +61,13 @@ const createClusterIcon = (count: number, color: string) => {
     };
 };
 
-const VizagMapView: React.FC<VizagMapViewProps> = ({ issues, selectedWard, selectedZone }) => {
+const VizagMapView: React.FC<VizagMapViewProps> = ({
+    issues,
+    selectedWard,
+    selectedZone,
+    selectedDistrict,
+    selectedMandal
+}) => {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -115,6 +123,7 @@ const VizagMapView: React.FC<VizagMapViewProps> = ({ issues, selectedWard, selec
     const [issueOpenedAtZoom, setIssueOpenedAtZoom] = useState<number | null>(null);
     const boundsChangeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wardDataLayerRef = useRef<google.maps.Data | null>(null);
+    const districtDataLayerRef = useRef<google.maps.Data | null>(null);
     const mapInitialized = useRef(false);
 
     const [isHeatmapMode, setIsHeatmapMode] = useState(false);
@@ -176,6 +185,97 @@ const VizagMapView: React.FC<VizagMapViewProps> = ({ issues, selectedWard, selec
             }
         };
     }, [map, selectedWard]);
+
+    // Load District/Mandal boundaries
+    useEffect(() => {
+        if (!map || !window.google) return;
+
+        // Initialize district/mandal data layer if needed
+        if (!districtDataLayerRef.current) {
+            districtDataLayerRef.current = new google.maps.Data();
+            districtDataLayerRef.current.setMap(map);
+        }
+
+        const districtLayer = districtDataLayerRef.current;
+
+        // Load GeoJSON for subdistricts (Mandals)
+        fetch('/andhra_pradesh_subdistricts_simplified.geojson')
+            .then(response => response.json())
+            .then(geojson => {
+                // Clear existing features
+                districtLayer.forEach((feature) => districtLayer.remove(feature));
+
+                // Add GeoJSON
+                districtLayer.addGeoJson(geojson);
+
+                // Style based on selection
+                districtLayer.setStyle((feature) => {
+                    const featDistrict = feature.getProperty('DISTRICT');
+                    const featMandal = feature.getProperty('SUBDISTRICT');
+
+                    const isDistrictSelected = selectedDistrict && featDistrict === selectedDistrict;
+                    const isMandalSelected = selectedMandal && featMandal === selectedMandal;
+
+                    if (isMandalSelected) {
+                        return {
+                            fillColor: '#EF4444', // Red for selected mandal
+                            fillOpacity: 0.2,
+                            strokeColor: '#B91C1C',
+                            strokeWeight: 3,
+                            strokeOpacity: 0.9,
+                            visible: true
+                        };
+                    }
+
+                    if (isDistrictSelected) {
+                        return {
+                            fillColor: '#F59E0B', // Amber for selected district
+                            fillOpacity: 0.1,
+                            strokeColor: '#D97706',
+                            strokeWeight: 2,
+                            strokeOpacity: 0.7,
+                            visible: true
+                        };
+                    }
+
+                    // Hide others if district/mandal selected, or show very faint if nothing selected
+                    return {
+                        visible: !!(selectedDistrict || selectedMandal) && !!(isDistrictSelected || isMandalSelected),
+                        fillOpacity: 0,
+                        strokeOpacity: 0,
+                        strokeWeight: 0
+                    };
+                });
+
+                // Fit boundaries if selection changed
+                if (selectedMandal || selectedDistrict) {
+                    const bounds = new google.maps.LatLngBounds();
+                    districtLayer.forEach((feature) => {
+                        const featDistrict = feature.getProperty('DISTRICT');
+                        const featMandal = feature.getProperty('SUBDISTRICT');
+
+                        if ((selectedMandal && featMandal === selectedMandal) ||
+                            (!selectedMandal && selectedDistrict && featDistrict === selectedDistrict)) {
+                            const geometry = feature.getGeometry();
+                            if (geometry) {
+                                geometry.forEachLatLng((latlng) => bounds.extend(latlng));
+                            }
+                        }
+                    });
+
+                    if (!bounds.isEmpty()) {
+                        map.fitBounds(bounds, { top: 100, right: 100, bottom: 100, left: 420 });
+                    }
+                }
+            })
+            .catch(error => console.error('Error loading subdistrict boundaries:', error));
+
+        return () => {
+            if (districtLayer) {
+                districtLayer.forEach((feature) => districtLayer.remove(feature));
+            }
+        };
+    }, [map, selectedDistrict, selectedMandal]);
 
     // Heatmap data
     const heatmapData = useMemo(() => {

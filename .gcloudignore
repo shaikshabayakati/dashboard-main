@@ -1,0 +1,22 @@
+# .gcloudignore
+# Standard ignores
+.git
+.gitignore
+.dockerignore
+.gcloudignore
+
+# node.js
+node_modules/
+.next/
+out/
+build/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Explicitly INCLUDE the service account file
+!service-account.json

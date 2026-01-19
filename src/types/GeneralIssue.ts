@@ -49,6 +49,10 @@ export interface DatabaseGeneralIssue {
     zone: string | null;
     corporator_name_address: string | null;
     severity: string | null;
+    confidence: number | null;
+    impact_score: number | null;
+    district: string | null;
+    mandal: string | null;
 }
 
 // Frontend interface (camelCase for React components)
@@ -77,4 +81,8 @@ export interface GeneralIssue {
     zone: string | null;
     corporatorNameAddress: string | null;
     severity: string | null;
+    confidence: number | null;
+    impactScore: number | null;
+    district: string | null;
+    mandal: string | null;
 }

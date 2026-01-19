@@ -25,6 +25,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
   const severityLabel = getSeverityLabel(report.severityLabel);
   const [address, setAddress] = useState<string>('Loading address...');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isAddressExpanded, setIsAddressExpanded] = useState(false);
 
   const handleImageClick = () => {
     if (onImageClick && report.images && report.images.length > 0) {
@@ -116,11 +117,24 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
       <div className="p-4 space-y-3">
 
         {/* Location */}
-        <div className="flex items-start justify-between text-sm">
-          <span className="font-medium text-gray-700">📍 Location</span>
-          <span className="text-gray-600 text-right max-w-[60%] select-text">
-            {address}
-          </span>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-gray-700 block">📍 Location</span>
+          <div
+            className={`text-gray-600 block select-text transition-all duration-300 relative ${!isAddressExpanded ? 'line-clamp-2' : 'whitespace-normal'}`}
+          >
+            {address || 'Address not available'}
+            {address && address.length > 50 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAddressExpanded(!isAddressExpanded);
+                }}
+                className="text-blue-500 hover:text-blue-700 ml-1 font-medium inline-flex items-center"
+              >
+                {isAddressExpanded ? ' (show less)' : '...'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Road Information
@@ -184,36 +198,51 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onClose, isExpanded = f
           </span>
         </div>
 
-        {/* Impact Score */}
-        {report.impactScore !== undefined && (
-          <div className="flex items-start justify-between text-sm">
-            <div className="flex items-center gap-1 group relative">
-              <span className="font-medium text-gray-700">📈 Impact Index</span>
-              <span className="cursor-help text-gray-400 hover:text-gray-600 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-4 h-4"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              {/* Tooltip */}
-              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
-                <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
-                <p className="leading-relaxed">
-                  The impact index is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
-                </p>
-              </div>
+        {/* AI Analysis Summary Box */}
+        {(report.description || report.impactScore !== undefined) && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
+            <div className="text-xs font-semibold text-blue-900 mb-1 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              AI Analysis Summary
             </div>
-            <span className="text-gray-600 text-right font-semibold">
-              {report.impactScore}
-            </span>
+
+            {report.description && (
+              <div className="text-sm text-gray-700 leading-relaxed mb-2">
+                {report.description}.
+              </div>
+            )}
+
+            {/* Impact Index inside summary block - ONLY for Potholes */}
+            {report.subCategory === 'Potholes' && (
+              <div className="pt-2 border-t border-blue-200 flex items-center justify-between">
+                <div className="flex items-center gap-1 group relative">
+                  <span className="text-xs font-medium text-blue-900 flex items-center gap-1">
+                    📈 Impact Index
+                  </span>
+                  <span className="cursor-help text-blue-400 hover:text-blue-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  {/* Tooltip */}
+                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-6 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg font-normal">
+                    <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                    <p className="leading-relaxed">
+                      The impact index is calculated by combining both pothole severity and the traffic conditions. Higher scores highlight locations where severe potholes and traffic levels together create the greatest urgency for repair.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-blue-900 font-bold text-sm">
+                  {report.impactScore !== null && report.impactScore !== undefined
+                    ? Number(report.impactScore).toFixed(1)
+                    : (report as any).impact_score !== null && (report as any).impact_score !== undefined
+                      ? Number((report as any).impact_score).toFixed(1)
+                      : ''}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

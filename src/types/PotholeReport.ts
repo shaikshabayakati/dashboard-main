@@ -89,6 +89,7 @@ export interface PotholeReport {
   roadTypeFromGeoJson?: string | null;
   distanceToRoad?: number | null;
   detectionCount?: number;
+  subCategory?: string;
 }
 
 export interface ClusterPoint {

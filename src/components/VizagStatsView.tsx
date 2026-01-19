@@ -7,6 +7,52 @@ import { Outfit } from 'next/font/google';
 
 const outfit = Outfit({ subsets: ['latin'] });
 
+const ExpandableText = ({
+    text,
+    isDarkMode,
+    maxChars = 100,
+    showAddressPattern = false
+}: {
+    text: string | null | undefined;
+    isDarkMode: boolean;
+    maxChars?: number;
+    showAddressPattern?: boolean;
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    if (!text) return <span>N/A</span>;
+
+    const shouldTruncate = showAddressPattern ? text.includes(',') : text.length > maxChars;
+
+    if (!shouldTruncate) return <span>{text}</span>;
+
+    const displayText = isExpanded
+        ? text
+        : (showAddressPattern ? text.split(',')[0] : text.slice(0, maxChars));
+
+    return (
+        <>
+            {displayText}
+            {!isExpanded && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
+                    className="text-blue-500 hover:text-blue-700 font-semibold ml-1"
+                >
+                    ... (show more)
+                </button>
+            )}
+            {isExpanded && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                    className="text-blue-500 hover:text-blue-700 font-semibold ml-2"
+                >
+                    show less
+                </button>
+            )}
+        </>
+    );
+};
+
 export default function VizagStatsView() {
     const { issues, isLoading, error } = useCombinedIssues();
 
@@ -427,7 +473,7 @@ export default function VizagStatsView() {
                             <path d="M128 384V512H256L128 384Z" fill="#F97316" />
                         </svg>
                         <div>
-                            <h1 className="text-xl font-bold">Vizag Issues Analytics</h1>
+                            <h1 className="text-xl font-bold">Andhra Pradesh Issues Analytics</h1>
                             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Overview of general issues</p>
                         </div>
                     </div>
@@ -516,19 +562,12 @@ export default function VizagStatsView() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getIssueTypeColor(issue.primaryIssue)}`}>
-                                                                    {issue.primaryIssue || 'Unknown'}
-                                                                </span>
-                                                                {issue.subCategory === 'Potholes' && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-400/20">
-                                                                        🕳️ Pothole
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {issue.subCategory && issue.subCategory !== 'None' && issue.subCategory !== 'Potholes' && (
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium border ${getIssueTypeColor(issue.primaryIssue)}`}>
+                                                                {issue.primaryIssue || 'Unknown'}
+                                                            </span>
+                                                            {issue.subCategory && issue.subCategory !== 'None' && (
                                                                 <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
-                                                                    {issue.subCategory}
+                                                                    {issue.subCategory === 'Potholes' ? 'Pothole' : issue.subCategory}
                                                                 </div>
                                                             )}
                                                         </td>
@@ -580,13 +619,44 @@ export default function VizagStatsView() {
                                                                             <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>AI Analysis Summary:</span>
                                                                             <p className={`${isDarkMode ? 'text-gray-300 bg-blue-500/10' : 'text-gray-800 bg-blue-50'} mt-1 p-3 rounded-lg border ${isDarkMode ? 'border-blue-500/20' : 'border-blue-200'} whitespace-pre-wrap`}>
                                                                                 {issue.evidence}
+
+                                                                                {/* Impact Index inside summary box */}
+                                                                                {/* Impact Index inside summary block - ONLY for Potholes */}
+                                                                                {issue.subCategory === 'Potholes' && (
+                                                                                    <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-blue-500/20' : 'border-blue-200'} flex items-center justify-between`}>
+                                                                                        <div className="flex items-center gap-1 group relative">
+                                                                                            <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs font-medium flex items-center gap-1`}>
+                                                                                                📈 Impact Index
+                                                                                            </span>
+                                                                                            <span className="cursor-help text-gray-400 hover:text-gray-600 transition-colors">
+                                                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                                                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                                                                                </svg>
+                                                                                            </span>
+                                                                                            {/* Tooltip */}
+                                                                                            <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 bottom-full mb-2 z-50 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg font-normal">
+                                                                                                <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                                                                                                <p className="leading-relaxed">
+                                                                                                    The impact index is calculated by combining pothole severity and traffic conditions. Higher scores indicate greater urgency for repair.
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <span className={`${isDarkMode ? 'text-blue-400' : 'text-blue-700'} font-bold text-sm`}>
+                                                                                            {issue.impactScore !== null && issue.impactScore !== undefined
+                                                                                                ? Number(issue.impactScore).toFixed(1)
+                                                                                                : (issue as any).impact_score !== null && (issue as any).impact_score !== undefined
+                                                                                                    ? Number((issue as any).impact_score).toFixed(1)
+                                                                                                    : '0.0'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
                                                                             </p>
                                                                         </div>
                                                                     )}
 
                                                                     <div>
                                                                         <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Full Address:</span>
-                                                                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}>{issue.address || 'N/A'}</p>
+                                                                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mt-1`}><ExpandableText text={issue.address} isDarkMode={isDarkMode} maxChars={80} /></p>
                                                                     </div>
 
                                                                     <div>
@@ -607,7 +677,7 @@ export default function VizagStatsView() {
                                                                         <div className="col-span-full">
                                                                             <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Corporator Details:</span>
                                                                             <p className={`${isDarkMode ? 'text-gray-300 bg-purple-500/10' : 'text-gray-800 bg-purple-50'} mt-1 p-3 rounded-lg border ${isDarkMode ? 'border-purple-500/20' : 'border-purple-200'}`}>
-                                                                                {issue.corporatorNameAddress}
+                                                                                <ExpandableText text={issue.corporatorNameAddress} isDarkMode={isDarkMode} showAddressPattern={true} />
                                                                             </p>
                                                                         </div>
                                                                     )}

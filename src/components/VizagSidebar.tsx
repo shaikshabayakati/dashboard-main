@@ -5,7 +5,13 @@ import { GeneralIssue, PrimaryIssueType } from '@/types/GeneralIssue';
 
 interface VizagSidebarProps {
     issues: GeneralIssue[];
-    onFilterChange: (filters: { ward: number | null; zone: string | null; issueType: PrimaryIssueType | null }) => void;
+    onFilterChange: (filters: {
+        ward: number | null;
+        zone: string | null;
+        issueType: PrimaryIssueType | null;
+        district: string | null;
+        mandal: string | null;
+    }) => void;
     showIssuesSidebar: boolean;
 }
 
@@ -21,13 +27,18 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
     const [selectedWard, setSelectedWard] = useState<number | null>(null);
     const [selectedZone, setSelectedZone] = useState<string | null>(null);
     const [selectedIssueType, setSelectedIssueType] = useState<PrimaryIssueType | null>(null);
+    const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+    const [selectedMandal, setSelectedMandal] = useState<string | null>(null);
 
-    // Calculate stats
+    // Calculate stats and filter options
     const stats = useMemo(() => {
         const total = issues.length;
         const byType: Record<string, number> = {};
         const byZone: Record<string, number> = {};
         const byWard: Record<number, number> = {};
+        const byDistrict: Record<string, number> = {};
+        const byMandal: Record<string, number> = {};
+        const districtToMandals: Record<string, Set<string>> = {};
 
         issues.forEach(issue => {
             const type = issue.primaryIssue || 'Unknown';
@@ -40,39 +51,118 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
             if (issue.wardNumber) {
                 byWard[issue.wardNumber] = (byWard[issue.wardNumber] || 0) + 1;
             }
+
+            if (issue.district) {
+                byDistrict[issue.district] = (byDistrict[issue.district] || 0) + 1;
+
+                if (issue.mandal) {
+                    if (!districtToMandals[issue.district]) {
+                        districtToMandals[issue.district] = new Set();
+                    }
+                    districtToMandals[issue.district].add(issue.mandal);
+                }
+            }
+
+            if (issue.mandal) {
+                byMandal[issue.mandal] = (byMandal[issue.mandal] || 0) + 1;
+            }
         });
 
         // Filter out 'None' or 'Unknown' categories from stats
         ['None', 'Unknown', 'none', 'unknown'].forEach(key => {
             delete byType[key];
             delete byZone[key];
+            delete byDistrict[key];
+            delete byMandal[key];
             // @ts-ignore
             delete byWard[key];
         });
 
-        return { total, byType, byZone, byWard };
+        return { total, byType, byZone, byWard, byDistrict, byMandal, districtToMandals };
     }, [issues]);
 
     const handleWardChange = (ward: number | null) => {
         setSelectedWard(ward);
-        onFilterChange({ ward, zone: selectedZone, issueType: selectedIssueType });
+        onFilterChange({
+            ward,
+            zone: selectedZone,
+            issueType: selectedIssueType,
+            district: selectedDistrict,
+            mandal: selectedMandal
+        });
     };
 
     const handleZoneChange = (zone: string | null) => {
         setSelectedZone(zone);
-        onFilterChange({ ward: selectedWard, zone, issueType: selectedIssueType });
+        onFilterChange({
+            ward: selectedWard,
+            zone,
+            issueType: selectedIssueType,
+            district: selectedDistrict,
+            mandal: selectedMandal
+        });
     };
 
     const handleIssueTypeChange = (issueType: PrimaryIssueType | null) => {
         setSelectedIssueType(issueType);
-        onFilterChange({ ward: selectedWard, zone: selectedZone, issueType });
+        onFilterChange({
+            ward: selectedWard,
+            zone: selectedZone,
+            issueType,
+            district: selectedDistrict,
+            mandal: selectedMandal
+        });
+    };
+
+    const handleDistrictChange = (district: string | null) => {
+        setSelectedDistrict(district);
+        // Clear mandal if it doesn't belong to the new district
+        let newMandal = selectedMandal;
+        if (district && selectedMandal && stats.districtToMandals[district] && !stats.districtToMandals[district].has(selectedMandal)) {
+            newMandal = null;
+            setSelectedMandal(null);
+        }
+
+        onFilterChange({
+            ward: selectedWard,
+            zone: selectedZone,
+            issueType: selectedIssueType,
+            district,
+            mandal: newMandal
+        });
+    };
+
+    const handleMandalChange = (mandal: string | null) => {
+        setSelectedMandal(mandal);
+
+        // Find district for this mandal if not selected
+        let newDistrict = selectedDistrict;
+        if (mandal && !selectedDistrict) {
+            for (const [dist, mandals] of Object.entries(stats.districtToMandals)) {
+                if (mandals.has(mandal)) {
+                    newDistrict = dist;
+                    setSelectedDistrict(dist);
+                    break;
+                }
+            }
+        }
+
+        onFilterChange({
+            ward: selectedWard,
+            zone: selectedZone,
+            issueType: selectedIssueType,
+            district: newDistrict,
+            mandal
+        });
     };
 
     const handleClearFilters = () => {
         setSelectedWard(null);
         setSelectedZone(null);
         setSelectedIssueType(null);
-        onFilterChange({ ward: null, zone: null, issueType: null });
+        setSelectedDistrict(null);
+        setSelectedMandal(null);
+        onFilterChange({ ward: null, zone: null, issueType: null, district: null, mandal: null });
     };
 
     return (
@@ -91,7 +181,7 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                     </svg>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900">Municipal Issues</h1>
-                        <p className="text-sm text-gray-500">Visakhapatnam</p>
+                        <p className="text-sm text-gray-500">Andhra Pradesh</p>
                     </div>
                 </div>
             </div>
@@ -101,6 +191,47 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
 
             {/* Filters */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {/* District Filter */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Filter by District
+                    </label>
+                    <select
+                        value={selectedDistrict || ''}
+                        onChange={(e) => handleDistrictChange(e.target.value || null)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                    >
+                        <option value="">All Districts</option>
+                        {Object.keys(stats.byDistrict).sort().map(district => (
+                            <option key={district} value={district}>
+                                {district} ({stats.byDistrict[district]} issues)
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Mandal Filter */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Filter by Mandal
+                    </label>
+                    <select
+                        value={selectedMandal || ''}
+                        onChange={(e) => handleMandalChange(e.target.value || null)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                    >
+                        <option value="">All Mandals</option>
+                        {Object.keys(stats.byMandal)
+                            .filter(mandal => !selectedDistrict || (stats.districtToMandals[selectedDistrict] && stats.districtToMandals[selectedDistrict].has(mandal)))
+                            .sort()
+                            .map(mandal => (
+                                <option key={mandal} value={mandal}>
+                                    {mandal} ({stats.byMandal[mandal]} issues)
+                                </option>
+                            ))}
+                    </select>
+                </div>
+
                 {/* Ward Filter */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -159,7 +290,7 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                 </div>
 
                 {/* Clear Filters Button */}
-                {(selectedWard || selectedZone || selectedIssueType) && (
+                {(selectedWard || selectedZone || selectedIssueType || selectedDistrict || selectedMandal) && (
                     <button
                         onClick={handleClearFilters}
                         className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors text-sm font-medium"

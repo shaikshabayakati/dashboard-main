@@ -93,7 +93,7 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     lng: dbReport.longitude,
     severity: severityValue,
     severityLabel: severityLabel,
-    impactScore: dbReport.impact_score ?? undefined,
+    impactScore: dbReport.impact_score !== null && dbReport.impact_score !== undefined ? Number(dbReport.impact_score) : undefined,
     timestamp: dbReport.created_at,
     images: dbReport.image_url ? [dbReport.image_url] : [],
     description: `Pothole detected with ${Math.round((dbReport.confidence ?? 0) * 100)}% confidence`,
@@ -114,6 +114,7 @@ export function mapDatabaseToFrontend(dbReport: DatabasePotholeReport): PotholeR
     roadTypeFromGeoJson: dbReport.road_type_from_geojson,
     distanceToRoad: dbReport.distance_to_road,
     detectionCount: dbReport.detection_count,
+    subCategory: dbReport.sub_category || 'Potholes',
   };
 }
 
@@ -173,22 +174,7 @@ export function mapPotholeReportToGeneralIssue(dbReport: DatabasePotholeReport):
 
   // Create evidence string with pothole-specific details
   const confidence = Math.round((dbReport.confidence ?? 0) * 100);
-  const evidenceParts = [
-    `Pothole detected with ${confidence}% confidence.`,
-    `Detection count: ${dbReport.detection_count}.`,
-  ];
-
-  if (dbReport.impact_score) {
-    evidenceParts.push(`Impact score: ${dbReport.impact_score.toFixed(2)}.`);
-  }
-  if (dbReport.road_name) {
-    evidenceParts.push(`Road: ${dbReport.road_name}.`);
-  }
-  if (dbReport.road_type) {
-    evidenceParts.push(`Road type: ${dbReport.road_type}.`);
-  }
-
-  const evidence = evidenceParts.join(' ');
+  const evidence = `Pothole detected with ${confidence}% confidence.`;
 
   // Use corporator_name_address if available, otherwise construct from individual fields
   let corporatorInfo = dbReport.corporator_name_address;
@@ -222,6 +208,9 @@ export function mapPotholeReportToGeneralIssue(dbReport: DatabasePotholeReport):
     zone: dbReport.zone,
     corporatorNameAddress: corporatorInfo,
     severity: dbReport.severity || 'Medium',
+    confidence: dbReport.confidence,
+    impactScore: dbReport.impact_score !== null && dbReport.impact_score !== undefined ? Number(dbReport.impact_score) :
+      ((dbReport as any).impactScore !== null && (dbReport as any).impactScore !== undefined ? Number((dbReport as any).impactScore) : null),
   };
 }
 

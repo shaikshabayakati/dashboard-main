@@ -28,18 +28,22 @@ export default function VizagMapPage() {
     const [filters, setFilters] = useState<{
         ward: number | null;
         zone: string | null;
-        issueType: PrimaryIssueType | null
+        issueType: PrimaryIssueType | null;
+        district: string | null;
+        mandal: string | null;
     }>({
         ward: null,
         zone: null,
-        issueType: null
+        issueType: null,
+        district: null,
+        mandal: null
     });
     const [showIssuesSidebar, setShowIssuesSidebar] = useState(false);
 
     // Use custom hook to fetch combined issues (general issues + pothole reports)
     const { issues, isLoading: loading, error } = useCombinedIssues();
 
-    // Filter issues based on selected ward, zone, and issue type
+    // Filter issues based on selected ward, zone, issue type, district, and mandal
     const filteredIssues = useMemo(() => {
         let filtered = issues;
 
@@ -55,17 +59,33 @@ export default function VizagMapPage() {
             filtered = filtered.filter(issue => issue.primaryIssue === filters.issueType);
         }
 
+        if (filters.district) {
+            filtered = filtered.filter(issue => issue.district === filters.district);
+        }
+
+        if (filters.mandal) {
+            filtered = filtered.filter(issue => issue.mandal === filters.mandal);
+        }
+
         return filtered;
     }, [issues, filters]);
 
     const handleFilterChange = (newFilters: {
         ward: number | null;
         zone: string | null;
-        issueType: PrimaryIssueType | null
+        issueType: PrimaryIssueType | null;
+        district: string | null;
+        mandal: string | null;
     }) => {
         setFilters(newFilters);
         // Show issues sidebar when any filter is selected
-        setShowIssuesSidebar(!!(newFilters.ward || newFilters.zone || newFilters.issueType));
+        setShowIssuesSidebar(!!(
+            newFilters.ward ||
+            newFilters.zone ||
+            newFilters.issueType ||
+            newFilters.district ||
+            newFilters.mandal
+        ));
     };
 
     const handleCloseIssuesSidebar = () => {
@@ -119,6 +139,8 @@ export default function VizagMapPage() {
                 <GeneralIssuesSidebar
                     wardNumber={filters.ward || undefined}
                     zoneName={filters.zone || undefined}
+                    districtName={filters.district || undefined}
+                    mandalName={filters.mandal || undefined}
                     issues={filteredIssues}
                     onClose={handleCloseIssuesSidebar}
                     isVisible={showIssuesSidebar}
@@ -129,6 +151,8 @@ export default function VizagMapPage() {
                         issues={filteredIssues}
                         selectedWard={filters.ward}
                         selectedZone={filters.zone}
+                        selectedDistrict={filters.district}
+                        selectedMandal={filters.mandal}
                     />
                 </main>
             </ClientOnly>
