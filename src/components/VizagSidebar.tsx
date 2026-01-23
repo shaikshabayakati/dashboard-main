@@ -2,6 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { GeneralIssue, PrimaryIssueType } from '@/types/GeneralIssue';
+import {
+    computeWardZScores,
+    issuesDataToWardInput,
+    getSeverityBadgeColor,
+    WardStats
+} from '@/utils/wardZScoreUtils';
 
 interface VizagSidebarProps {
     issues: GeneralIssue[];
@@ -51,6 +57,12 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
         });
 
         return { total, byType, byZone, byWard };
+    }, [issues]);
+
+    // Compute Z-scores for wards
+    const wardZScoreData = useMemo(() => {
+        const wardInputs = issuesDataToWardInput(issues);
+        return computeWardZScores(wardInputs);
     }, [issues]);
 
     const handleWardChange = (ward: number | null) => {
@@ -186,6 +198,47 @@ const VizagSidebar: React.FC<VizagSidebarProps> = ({ issues, onFilterChange, sho
                         ))}
                     </div>
                 </div>
+
+                {/* Top Severity Wards - Z-Score Based */}
+                {wardZScoreData.wardStats.length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                            <span>📊</span> Top Severity Wards
+                            <span className="ml-auto text-[10px] font-normal text-purple-500">Z-Score</span>
+                        </div>
+                        <div className="space-y-1.5">
+                            {wardZScoreData.wardStats.slice(0, 5).map((ward) => {
+                                const colors = getSeverityBadgeColor(ward.severity);
+                                return (
+                                    <div
+                                        key={ward.wardId}
+                                        className="flex items-center justify-between text-sm p-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors"
+                                        onClick={() => handleWardChange(ward.wardId)}
+                                    >
+                                        <div className="flex items-center gap-2 truncate flex-1">
+                                            <span className={`text-xs ${colors.icon === '🔴' ? 'text-red-500' : colors.icon === '🟠' ? 'text-orange-500' : 'text-green-500'}`}>
+                                                {colors.icon}
+                                            </span>
+                                            <span className="text-gray-700 truncate">{ward.wardName}</span>
+                                            <span className="text-gray-400 text-xs">({ward.reportCount})</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className={`text-xs font-mono ${ward.zScore > 0 ? 'text-red-500' : ward.zScore < 0 ? 'text-green-500' : 'text-gray-500'}`}>
+                                                {ward.zScore > 0 ? '+' : ''}{ward.zScore.toFixed(1)}
+                                            </span>
+                                            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${colors.bg} ${colors.text}`}>
+                                                {ward.severity}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-2 text-[10px] text-gray-400 bg-gray-50 p-1.5 rounded">
+                            μ = {wardZScoreData.metrics.mean.toFixed(1)} reports/ward | σ = ±{wardZScoreData.metrics.standardDeviation.toFixed(1)}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

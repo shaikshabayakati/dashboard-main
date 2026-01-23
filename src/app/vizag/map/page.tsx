@@ -37,7 +37,17 @@ export default function VizagMapPage() {
     const [showIssuesSidebar, setShowIssuesSidebar] = useState(false);
 
     // Use custom hook to fetch combined issues (general issues + pothole reports)
-    const { issues, isLoading: loading, error } = useCombinedIssues();
+    const { issues: allIssues, isLoading: loading, error } = useCombinedIssues();
+
+    // Filter: only verified reports with valid ward assignments
+    const issues = useMemo(() =>
+        allIssues.filter(issue =>
+            issue.wardNumber &&
+            issue.wardNumber > 0 &&
+            issue.isAuthentic === true
+        ),
+        [allIssues]
+    );
 
     // Filter issues based on selected ward, zone, and issue type
     const filteredIssues = useMemo(() => {

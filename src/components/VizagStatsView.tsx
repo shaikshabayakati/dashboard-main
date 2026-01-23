@@ -54,13 +54,22 @@ const ExpandableText = ({
 };
 
 export default function VizagStatsView() {
-    const { issues, isLoading, error } = useCombinedIssues();
+    const { issues: allIssues, isLoading, error } = useCombinedIssues();
 
-    // Filter states
+    // Filter: only verified reports with valid ward assignments
+    const issues = useMemo(() =>
+        allIssues.filter(issue =>
+            issue.wardNumber &&
+            issue.wardNumber > 0 &&
+            issue.isAuthentic === true
+        ),
+        [allIssues]
+    );
+
+    // Filter states (removed verificationFilter)
     const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
     const [wardFilter, setWardFilter] = useState<string>('');
     const [zoneFilter, setZoneFilter] = useState<string>('');
-    const [verificationFilter, setVerificationFilter] = useState<string>('all');
     const [locationFilter, setLocationFilter] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
@@ -82,7 +91,7 @@ export default function VizagStatsView() {
     // Reset pagination when filters change
     React.useEffect(() => {
         setVisibleCount(10);
-    }, [issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, severityFilter, sortColumn, sortOrder]);
+    }, [issueTypeFilter, wardFilter, zoneFilter, locationFilter, startDate, endDate, severityFilter, sortColumn, sortOrder]);
 
     // Calculate stats for filters
     const stats = useMemo(() => {
@@ -128,12 +137,7 @@ export default function VizagStatsView() {
             filtered = filtered.filter(i => i.zone === zoneFilter);
         }
 
-        // Verification filter
-        if (verificationFilter !== 'all') {
-            filtered = filtered.filter(i =>
-                verificationFilter === 'verified' ? i.isAuthentic : !i.isAuthentic
-            );
-        }
+        // Removed: Verification filter (all issues are verified)
 
         // Location text filter
         if (locationFilter) {
@@ -180,7 +184,7 @@ export default function VizagStatsView() {
         });
 
         return filtered;
-    }, [issues, issueTypeFilter, wardFilter, zoneFilter, verificationFilter, locationFilter, startDate, endDate, sortColumn, sortOrder]);
+    }, [issues, issueTypeFilter, wardFilter, zoneFilter, locationFilter, startDate, endDate, severityFilter, sortColumn, sortOrder]);
 
     // Infinite scroll logic
     const loadMore = useCallback(() => {
@@ -346,19 +350,7 @@ export default function VizagStatsView() {
                         </select>
                     </div>
 
-                    {/* Verification Status Filter */}
-                    <div>
-                        <label className={`block text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2 font-medium`}>Verification Status</label>
-                        <select
-                            value={verificationFilter}
-                            onChange={(e) => setVerificationFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="verified">✓ Verified</option>
-                            <option value="unverified">⚠ Unverified</option>
-                        </select>
-                    </div>
+
 
                     {/* Location Filter */}
                     <div>
@@ -394,13 +386,12 @@ export default function VizagStatsView() {
                         />
                     </div>
                     {/* Clear Filters */}
-                    {(issueTypeFilter !== 'all' || wardFilter || zoneFilter || verificationFilter !== 'all' || locationFilter || startDate || endDate) && (
+                    {(issueTypeFilter !== 'all' || wardFilter || zoneFilter || locationFilter || startDate || endDate || severityFilter !== 'all') && (
                         <button
                             onClick={() => {
                                 setIssueTypeFilter('all');
                                 setWardFilter('');
                                 setZoneFilter('');
-                                setVerificationFilter('all');
                                 setLocationFilter('');
                                 setStartDate('');
                                 setEndDate('');
@@ -515,9 +506,6 @@ export default function VizagStatsView() {
                                             <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[15%]`}>
                                                 Ward / Zone
                                             </th>
-                                            <th className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} uppercase w-[12%]`}>
-                                                Status
-                                            </th>
                                             <th
                                                 className={`px-4 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'} uppercase cursor-pointer select-none transition-colors w-[12%]`}
                                                 onClick={() => handleSort('severity')}
@@ -533,7 +521,7 @@ export default function VizagStatsView() {
                                     <tbody className={`${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'} divide-y`}>
                                         {filteredIssues.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
+                                                <td colSpan={6} className={`px-4 py-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>
                                                     No issues found matching the filters
                                                 </td>
                                             </tr>
@@ -580,20 +568,6 @@ export default function VizagStatsView() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {issue.isAuthentic && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-400/10 text-green-400 border border-green-400/20">
-                                                                        ✓ Verified
-                                                                    </span>
-                                                                )}
-                                                                {!issue.isAuthentic && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
-                                                                        ⚠ Unverified
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-4">
                                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${getSeverityColor(issue.severity)}`}>
                                                                 {issue.severity || 'Unknown'}
                                                             </span>
@@ -611,7 +585,7 @@ export default function VizagStatsView() {
                                                     </tr>
                                                     {expandedRow === issue.id && (
                                                         <tr>
-                                                            <td colSpan={7} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
+                                                            <td colSpan={6} className={`px-4 py-4 ${isDarkMode ? 'bg-[#0f1014]' : 'bg-gray-50'}`}>
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-base">
                                                                     {/* AI Analysis Summary */}
                                                                     {issue.evidence && issue.evidence !== 'None' && (
@@ -746,7 +720,7 @@ export default function VizagStatsView() {
                                         {/* Infinite scroll observer */}
                                         {visibleCount < filteredIssues.length && (
                                             <tr ref={observerRef}>
-                                                <td colSpan={7} className="h-4"></td>
+                                                <td colSpan={6} className="h-4"></td>
                                             </tr>
                                         )}
                                     </tbody>

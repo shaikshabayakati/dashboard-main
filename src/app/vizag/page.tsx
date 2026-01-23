@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import dynamic from 'next/dynamic';
 import { Outfit } from 'next/font/google';
+import WardLeaderboard from '@/components/WardLeaderboard';
 
 const outfit = Outfit({ subsets: ['latin'] });
 
@@ -45,7 +46,17 @@ const COLORS = {
 };
 
 export default function VizagDashboard() {
-    const { issues, isLoading, error } = useCombinedIssues();
+    const { issues: allIssues, isLoading, error } = useCombinedIssues();
+
+    // Filter: only verified reports with valid ward assignments
+    const issues = useMemo(() =>
+        allIssues.filter(issue =>
+            issue.wardNumber &&
+            issue.wardNumber > 0 &&
+            issue.isAuthentic === true
+        ),
+        [allIssues]
+    );
 
     // Calculate KPIs
     const kpis = useMemo(() => {
@@ -58,7 +69,7 @@ export default function VizagDashboard() {
             return issueDate.getTime() === today.getTime();
         });
 
-        const criticalIssues = issues.filter(i => !i.isAuthentic);
+        // Removed: criticalIssues (all issues are now verified)
 
         // Calculate weekly reports (last 7 days)
         const weekAgo = new Date();
@@ -71,16 +82,16 @@ export default function VizagDashboard() {
 
         // Get top ward
         const wardCounts = issues.reduce((acc, i) => {
-            const ward = i.wardNumber || 0;
+            const ward = i.wardNumber!;
             acc[ward] = (acc[ward] || 0) + 1;
             return acc;
         }, {} as Record<number, number>);
 
-        const topWard = Object.entries(wardCounts).sort((a, b) => b[1] - a[1])[0];
+        const topWard = Object.entries(wardCounts)
+            .sort((a, b) => b[1] - a[1])[0];
 
         return {
             totalToday: todayIssues.length,
-            critical: criticalIssues.length,
             topWard: topWard ? `Ward ${topWard[0]} (${topWard[1]})` : 'N/A',
             weeklyReports
         };
@@ -89,7 +100,7 @@ export default function VizagDashboard() {
     // Ward distribution data
     const wardData = useMemo(() => {
         const counts = issues.reduce((acc, i) => {
-            const ward = i.wardNumber || 0;
+            const ward = i.wardNumber!;
             acc[ward] = (acc[ward] || 0) + 1;
             return acc;
         }, {} as Record<number, number>);
@@ -99,6 +110,7 @@ export default function VizagDashboard() {
             .sort((a, b) => b.count - a.count)
             .slice(0, 10); // Top 10 wards
     }, [issues]);
+
 
     // Issue category data
     const categoryData = useMemo(() => {
@@ -153,18 +165,12 @@ export default function VizagDashboard() {
 
             return {
                 date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                total: dayIssues.length,
-                verified: dayIssues.filter(i => i.isAuthentic).length,
-                unverified: dayIssues.filter(i => !i.isAuthentic).length
+                total: dayIssues.length
             };
         });
     }, [issues]);
 
-    // Status data
-    const verificationData = useMemo(() => [
-        { name: 'Verified', value: issues.filter(i => i.isAuthentic).length },
-        { name: 'Unverified', value: issues.filter(i => !i.isAuthentic).length }
-    ], [issues]);
+    // Removed: verificationData (all issues are verified)
     const severityData = useMemo(() => {
         const counts = issues.reduce((acc, i) => {
             const s = (i.severity || 'unknown').toLowerCase();
@@ -296,9 +302,6 @@ export default function VizagDashboard() {
                                     <p className="text-sm text-gray-700 line-clamp-2">{issue.address}</p>
                                     <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
                                         <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
-                                        {issue.isAuthentic && (
-                                            <span className="text-green-600">✓ Verified</span>
-                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -330,7 +333,7 @@ export default function VizagDashboard() {
                 </div>
 
                 {/* KPI Cards Row - Premium Styled */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-orange-50/30 group hover:scale-[1.02] transition-all duration-300">
                         <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Issues Today</div>
                         <div className="mt-3 text-4xl font-black text-slate-900 group-hover:text-orange-600 transition-colors">{kpis.totalToday}</div>
@@ -339,15 +342,27 @@ export default function VizagDashboard() {
                         <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Weekly Reports</div>
                         <div className="mt-3 text-4xl font-black text-blue-600 transition-colors">{kpis.weeklyReports}</div>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-red-50/30 group hover:scale-[1.02] transition-all duration-300">
-                        <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Critical Unresolved</div>
-                        <div className="mt-3 text-4xl font-black text-red-600 transition-colors">{kpis.critical}</div>
-                    </div>
                     <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-purple-50/30 group hover:scale-[1.02] transition-all duration-300">
                         <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Top Ward</div>
                         <div className="mt-3 text-2xl font-black text-slate-900 group-hover:text-purple-600 transition-colors">{kpis.topWard}</div>
                     </div>
                 </div>
+
+
+                {/* Ward Leaderboard - Z-Score Based Classification */}
+                <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <span className="w-1.5 h-6 bg-gradient-to-b from-red-500 via-orange-500 to-green-500 rounded-full"></span>
+                        Ward Severity Leaderboard
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">Z-Score Based</span>
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Wards classified by statistical deviation from city average. Higher Z-scores indicate more issues relative to other wards.
+                    </p>
+
+                    <WardLeaderboard issues={issues} isDarkMode={false} maxItems={10} showMetrics={true} />
+                </div>
+
 
                 {/* Charts Grid - Enhanced */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
@@ -435,37 +450,11 @@ export default function VizagDashboard() {
                                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                                 <Line type="monotone" dataKey="total" stroke="#F97316" strokeWidth={3} dot={{ r: 4, fill: '#F97316', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="verified" stroke="#10B981" strokeWidth={3} dot={{ r: 4, fill: '#10B981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="unverified" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4, fill: '#F59E0B', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
 
-                    {/* Verification Status */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-amber-500 rounded-full"></span>
-                            Verification Status
-                        </h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={verificationData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={8}
-                                    dataKey="value"
-                                    label={({ name, value }) => `${name}: ${value}`}
-                                >
-                                    <Cell fill={COLORS.verified} stroke="none" />
-                                    <Cell fill={COLORS.unverified} stroke="none" />
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
+
 
                     {/* Severity Distribution */}
                     <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
