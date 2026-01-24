@@ -11,29 +11,60 @@ import {
     WardStats,
     ZScoreMetrics
 } from '@/utils/wardZScoreUtils';
+import {
+    computeWeightedWardScores,
+    IssueWeights,
+    WeightedWardStats
+} from '@/utils/weightedScoringUtils';
 
 interface WardLeaderboardProps {
-    issues: { wardNumber: number | null }[];
+    issues: { wardNumber: number | null; primaryIssue?: string | null }[];
     isDarkMode?: boolean;
     maxItems?: number;
     showMetrics?: boolean;
+    scoringMode?: 'statistical' | 'weighted';
+    weights?: IssueWeights;
 }
 
 const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
     issues,
     isDarkMode = false,
     maxItems = 10,
-    showMetrics = true
+    showMetrics = true,
+    scoringMode = 'statistical',
+    weights
 }) => {
     const router = useRouter();
     const [showAll, setShowAll] = useState(false);
     const [hoveredWard, setHoveredWard] = useState<number | null>(null);
 
-    // Compute Z-scores for all wards
+    // Compute scores based on selected mode
     const { wardStats, metrics } = useMemo(() => {
-        const wardInputs = issuesDataToWardInput(issues);
-        return computeWardZScores(wardInputs);
-    }, [issues]);
+        if (scoringMode === 'weighted') {
+            const weighted = computeWeightedWardScores(issues, weights);
+            // Convert WeightedWardStats to WardStats format
+            return {
+                wardStats: weighted.wardStats.map(w => ({
+                    wardId: w.wardId,
+                    wardName: w.wardName,
+                    reportCount: w.reportCount,
+                    zScore: w.zScore,
+                    severity: w.severity,
+                    deviationFromAverage: w.deviationFromAverage,
+                    weightedScore: w.weightedScore
+                })) as any,
+                metrics: {
+                    mean: weighted.metrics.mean,
+                    standardDeviation: weighted.metrics.standardDeviation,
+                    totalReports: weighted.metrics.totalReports,
+                    wardCount: weighted.metrics.wardCount
+                }
+            };
+        } else {
+            const wardInputs = issuesDataToWardInput(issues);
+            return computeWardZScores(wardInputs);
+        }
+    }, [issues, scoringMode, weights]);
 
     const displayedWards = showAll ? wardStats : wardStats.slice(0, maxItems);
 
@@ -48,7 +79,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
 
     // Count wards by severity
     const severityCounts = useMemo(() => {
-        return wardStats.reduce((acc, ward) => {
+        return wardStats.reduce((acc: Record<string, number>, ward: WardStats) => {
             acc[ward.severity] = (acc[ward.severity] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -66,7 +97,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
         <div className="space-y-4">
             {/* Ward Cards */}
             <div className="space-y-2">
-                {displayedWards.map((ward, index) => {
+                {displayedWards.map((ward: WardStats, index: number) => {
                     const colors = getSeverityColors(ward.severity);
                     const isHovered = hoveredWard === ward.wardId;
 
@@ -113,33 +144,41 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Center Section: Z-Score */}
+                                {/* Center Section: Z-Score or Weighted Score */}
                                 <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                                     <div className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        Z-Score
+                                        {scoringMode === 'weighted' ? 'Weighted Score' : 'Z-Score'}
                                     </div>
                                     <div className={`
                                         text-lg font-bold tabular-nums
-                                        ${ward.zScore > 0 ? 'text-red-500' : ward.zScore < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+                                        ${scoringMode === 'weighted'
+                                            ? (isDarkMode ? 'text-blue-400' : 'text-blue-600')
+                                            : ward.zScore > 0 ? 'text-red-500' : ward.zScore < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                        }
                                     `}>
-                                        {ward.zScore > 0 ? '+' : ''}{ward.zScore.toFixed(2)}
+                                        {scoringMode === 'weighted'
+                                            ? (ward as any).weightedScore?.toFixed(1) || '0.0'
+                                            : `${ward.zScore > 0 ? '+' : ''}${ward.zScore.toFixed(2)}`
+                                        }
                                     </div>
                                 </div>
 
-                                {/* Right Section: Deviation & Severity */}
+                                {/* Right Section: Deviation (statistical only) & Severity */}
                                 <div className="flex items-center gap-3 flex-shrink-0">
-                                    {/* Deviation from Average */}
-                                    <div className="text-right hidden sm:block">
-                                        <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                            Deviation
+                                    {/* Deviation from Average - only show in statistical mode */}
+                                    {scoringMode === 'statistical' && (
+                                        <div className="text-right hidden sm:block">
+                                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                                Deviation
+                                            </div>
+                                            <div className={`
+                                                text-sm font-semibold
+                                                ${ward.deviationFromAverage > 0 ? 'text-red-500' : ward.deviationFromAverage < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+                                            `}>
+                                                {ward.deviationFromAverage > 0 ? '+' : ''}{ward.deviationFromAverage.toFixed(1)}%
+                                            </div>
                                         </div>
-                                        <div className={`
-                                            text-sm font-semibold
-                                            ${ward.deviationFromAverage > 0 ? 'text-red-500' : ward.deviationFromAverage < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
-                                        `}>
-                                            {ward.deviationFromAverage > 0 ? '+' : ''}{ward.deviationFromAverage.toFixed(1)}%
-                                        </div>
-                                    </div>
+                                    )}
 
                                     {/* Severity Badge */}
                                     <div className={`

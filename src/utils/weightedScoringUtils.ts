@@ -1,0 +1,312 @@
+/**
+ * Weighted Priority Scoring System
+ * 
+ * This module implements a weighted scoring system where administrators can
+ * assign priority weights (1-10) to different issue types. Ward scores are
+ * calculated as the cumulative sum of (issue_count × weight) for each type.
+ * 
+ * Example:
+ * If admin sets: Garbage=3, Road=5, Stray animals=7
+ * And Ward 42 has: 3 garbage, 2 road, 1 stray animal
+ * Score = (3×3) + (2×5) + (1×7) = 9 + 10 + 7 = 26 points
+ */
+
+export type IssueType = 'Road' | 'Footpath' | 'Electricity' | 'Garbage/sewage' | 'Stray animals';
+
+export interface IssueWeights {
+    'Road': number;
+    'Footpath': number;
+    'Electricity': number;
+    'Garbage/sewage': number;
+    'Stray animals': number;
+}
+
+export interface WeightedWardStats {
+    wardId: number;
+    wardName: string;
+    reportCount: number;
+    weightedScore: number;
+    zScore: number;
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    deviationFromAverage: number;
+    issueBreakdown: {
+        type: IssueType;
+        count: number;
+        weight: number;
+        contribution: number;
+    }[];
+}
+
+export interface WeightedMetrics {
+    mean: number;
+    standardDeviation: number;
+    totalReports: number;
+    totalWeightedScore: number;
+    wardCount: number;
+}
+
+const STORAGE_KEY_WEIGHTS = 'vizag_issue_weights';
+const STORAGE_KEY_MODE = 'vizag_scoring_mode';
+
+/**
+ * Default weights - all issue types start at 5 (neutral)
+ */
+const DEFAULT_WEIGHTS: IssueWeights = {
+    'Road': 5,
+    'Footpath': 5,
+    'Electricity': 5,
+    'Garbage/sewage': 5,
+    'Stray animals': 5
+};
+
+/**
+ * Get issue weights from localStorage, or return defaults
+ */
+export function getIssueWeights(): IssueWeights {
+    if (typeof window === 'undefined') return DEFAULT_WEIGHTS;
+
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_WEIGHTS);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            // Validate that all required keys exist
+            const isValid = Object.keys(DEFAULT_WEIGHTS).every(key =>
+                typeof parsed[key] === 'number' && parsed[key] >= 1 && parsed[key] <= 10
+            );
+            if (isValid) return parsed;
+        }
+    } catch (error) {
+        console.error('Error loading weights from localStorage:', error);
+    }
+
+    return DEFAULT_WEIGHTS;
+}
+
+/**
+ * Save issue weights to localStorage
+ */
+export function setIssueWeights(weights: IssueWeights): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+        localStorage.setItem(STORAGE_KEY_WEIGHTS, JSON.stringify(weights));
+    } catch (error) {
+        console.error('Error saving weights to localStorage:', error);
+    }
+}
+
+/**
+ * Get current scoring mode from localStorage
+ */
+export function getScoringMode(): 'statistical' | 'weighted' {
+    if (typeof window === 'undefined') return 'statistical';
+
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_MODE);
+        if (stored === 'weighted') return 'weighted';
+    } catch (error) {
+        console.error('Error loading scoring mode:', error);
+    }
+
+    return 'statistical';
+}
+
+/**
+ * Save scoring mode to localStorage
+ */
+export function setScoringMode(mode: 'statistical' | 'weighted'): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+        localStorage.setItem(STORAGE_KEY_MODE, mode);
+    } catch (error) {
+        console.error('Error saving scoring mode:', error);
+    }
+}
+
+/**
+ * Reset weights to defaults
+ */
+export function resetWeightsToDefaults(): void {
+    setIssueWeights(DEFAULT_WEIGHTS);
+}
+
+/**
+ * Calculate weighted score for a single ward
+ */
+function calculateWardWeightedScore(
+    issues: { primaryIssue?: string | null }[],
+    weights: IssueWeights
+): { score: number; breakdown: WeightedWardStats['issueBreakdown'] } {
+    const breakdown: WeightedWardStats['issueBreakdown'] = [];
+    let totalScore = 0;
+
+    // Count issues by type
+    const typeCounts: Partial<Record<IssueType, number>> = {};
+    issues.forEach(issue => {
+        const type = issue.primaryIssue as IssueType;
+        if (type && type in weights) {
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
+        }
+    });
+
+    // Calculate contribution for each type
+    Object.entries(typeCounts).forEach(([type, count]) => {
+        const issueType = type as IssueType;
+        const weight = weights[issueType];
+        const contribution = count * weight;
+
+        breakdown.push({
+            type: issueType,
+            count,
+            weight,
+            contribution
+        });
+
+        totalScore += contribution;
+    });
+
+    return { score: totalScore, breakdown };
+}
+
+/**
+ * Calculate mean of weighted scores
+ */
+function calculateMean(scores: number[]): number {
+    if (scores.length === 0) return 0;
+    return scores.reduce((sum, val) => sum + val, 0) / scores.length;
+}
+
+/**
+ * Calculate standard deviation of weighted scores
+ */
+function calculateStandardDeviation(scores: number[], mean: number): number {
+    if (scores.length === 0) return 0;
+
+    const squaredDiffs = scores.map(score => Math.pow(score - mean, 2));
+    const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / scores.length;
+
+    return Math.sqrt(variance);
+}
+
+/**
+ * Calculate Z-score for weighted score
+ */
+function calculateZScore(score: number, mean: number, stdDev: number): number {
+    if (stdDev === 0) return 0;
+    return (score - mean) / stdDev;
+}
+
+/**
+ * Determine severity based on Z-score
+ */
+function determineSeverity(zScore: number): 'HIGH' | 'MEDIUM' | 'LOW' {
+    if (zScore > 1.0) return 'HIGH';
+    if (zScore >= 0) return 'MEDIUM';
+    return 'LOW';
+}
+
+/**
+ * Calculate percentage deviation from mean
+ */
+function calculateDeviationPercentage(value: number, mean: number): number {
+    if (mean === 0) return 0;
+    return ((value - mean) / mean) * 100;
+}
+
+/**
+ * Main function to compute weighted ward scores
+ * 
+ * @param issues - Array of all issues
+ * @param weights - Issue type weights (1-10)
+ * @returns Ward statistics with weighted scores and Z-score classifications
+ */
+export function computeWeightedWardScores(
+    issues: { wardNumber: number | null; primaryIssue?: string | null }[],
+    weights: IssueWeights = getIssueWeights()
+): {
+    wardStats: WeightedWardStats[];
+    metrics: WeightedMetrics;
+} {
+    // Group issues by ward
+    const wardIssues: Record<number, typeof issues> = {};
+
+    issues.forEach(issue => {
+        if (issue.wardNumber && issue.wardNumber > 0) {
+            if (!wardIssues[issue.wardNumber]) {
+                wardIssues[issue.wardNumber] = [];
+            }
+            wardIssues[issue.wardNumber].push(issue);
+        }
+    });
+
+    if (Object.keys(wardIssues).length === 0) {
+        return {
+            wardStats: [],
+            metrics: {
+                mean: 0,
+                standardDeviation: 0,
+                totalReports: 0,
+                totalWeightedScore: 0,
+                wardCount: 0
+            }
+        };
+    }
+
+    // Calculate weighted scores for each ward
+    const wardScores: Array<{
+        wardId: number;
+        score: number;
+        reportCount: number;
+        breakdown: WeightedWardStats['issueBreakdown'];
+    }> = [];
+
+    Object.entries(wardIssues).forEach(([wardId, wardIssueList]) => {
+        const { score, breakdown } = calculateWardWeightedScore(wardIssueList, weights);
+        wardScores.push({
+            wardId: parseInt(wardId),
+            score,
+            reportCount: wardIssueList.length,
+            breakdown
+        });
+    });
+
+    // Calculate global metrics
+    const scores = wardScores.map(w => w.score);
+    const mean = calculateMean(scores);
+    const standardDeviation = calculateStandardDeviation(scores, mean);
+    const totalReports = issues.filter(i => i.wardNumber && i.wardNumber > 0).length;
+    const totalWeightedScore = scores.reduce((sum, val) => sum + val, 0);
+
+    // Calculate Z-scores and severity for each ward
+    const wardStats: WeightedWardStats[] = wardScores.map(ward => {
+        const zScore = calculateZScore(ward.score, mean, standardDeviation);
+        const severity = determineSeverity(zScore);
+        const deviationFromAverage = calculateDeviationPercentage(ward.score, mean);
+
+        return {
+            wardId: ward.wardId,
+            wardName: `Ward ${ward.wardId}`,
+            reportCount: ward.reportCount,
+            weightedScore: Math.round(ward.score * 10) / 10,
+            zScore: Math.round(zScore * 100) / 100,
+            severity,
+            deviationFromAverage: Math.round(deviationFromAverage * 10) / 10,
+            issueBreakdown: ward.breakdown
+        };
+    });
+
+    // Sort by weighted score (descending)
+    wardStats.sort((a, b) => b.weightedScore - a.weightedScore);
+
+    return {
+        wardStats,
+        metrics: {
+            mean: Math.round(mean * 100) / 100,
+            standardDeviation: Math.round(standardDeviation * 100) / 100,
+            totalReports,
+            totalWeightedScore: Math.round(totalWeightedScore * 10) / 10,
+            wardCount: wardScores.length
+        }
+    };
+}

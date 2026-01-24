@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useCombinedIssues } from '@/hooks/useCombinedIssues';
 import { GeneralIssue } from '@/types/GeneralIssue';
@@ -22,6 +22,11 @@ import {
 import dynamic from 'next/dynamic';
 import { Outfit } from 'next/font/google';
 import WardLeaderboard from '@/components/WardLeaderboard';
+import {
+    getScoringMode,
+    getIssueWeights,
+    IssueWeights
+} from '@/utils/weightedScoringUtils';
 
 const outfit = Outfit({ subsets: ['latin'] });
 
@@ -47,6 +52,37 @@ const COLORS = {
 
 export default function VizagDashboard() {
     const { issues: allIssues, isLoading, error } = useCombinedIssues();
+    const [scoringMode, setScoringModeState] = useState<'statistical' | 'weighted'>('statistical');
+    const [weights, setWeights] = useState<IssueWeights>(getIssueWeights());
+
+    // Load scoring mode from localStorage on mount (read-only)
+    useEffect(() => {
+        setScoringModeState(getScoringMode());
+        setWeights(getIssueWeights());
+    }, []);
+
+    // Reload settings when page becomes visible (e.g., returning from admin page)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                setScoringModeState(getScoringMode());
+                setWeights(getIssueWeights());
+            }
+        };
+
+        const handleFocus = () => {
+            setScoringModeState(getScoringMode());
+            setWeights(getIssueWeights());
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, []);
 
     // Filter: only verified reports with valid ward assignments
     const issues = useMemo(() =>
@@ -351,39 +387,84 @@ export default function VizagDashboard() {
 
                 {/* Ward Leaderboard - Z-Score Based Classification */}
                 <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-gradient-to-b from-red-500 via-orange-500 to-green-500 rounded-full"></span>
-                        Ward Severity Leaderboard
-                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">Z-Score Based</span>
-                        <div className="group relative inline-block">
-                            <svg
-                                className="w-5 h-5 text-gray-400 hover:text-purple-600 cursor-help transition-colors"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                            >
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                            </svg>
-                            {/* Tooltip */}
-                            <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-80 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl">
-                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-                                <p className="font-semibold mb-2">What is Z-Score?</p>
-                                <p className="leading-relaxed mb-2">
-                                    Z-score is a statistical measure that shows how far a ward's issue count is from the average, measured in standard deviations.
-                                </p>
-                                <ul className="space-y-1 text-xs">
-                                    <li>• <strong>Z &gt; +1.0:</strong> Ward has significantly more issues than average</li>
-                                    <li>• <strong>0 to +1.0:</strong> Ward has slightly more issues than average</li>
-                                    <li>• <strong>Z &lt; 0:</strong> Ward has fewer issues than average</li>
-                                </ul>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span className="w-1.5 h-6 bg-gradient-to-b from-red-500 via-orange-500 to-green-500 rounded-full"></span>
+                            Ward Severity Leaderboard
+                            <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${scoringMode === 'statistical'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                {scoringMode === 'statistical' ? 'Z-Score Based' : 'Priority Weighted'}
+                            </span>
+                            <div className="group relative inline-block">
+                                <svg
+                                    className="w-5 h-5 text-gray-400 hover:text-purple-600 cursor-help transition-colors"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                                {/* Tooltip */}
+                                <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-80 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl">
+                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                    {scoringMode === 'statistical' ? (
+                                        <>
+                                            <p className="font-semibold mb-2">What is Z-Score?</p>
+                                            <p className="leading-relaxed mb-2">
+                                                Z-score is a statistical measure that shows how far a ward's issue count is from the average, measured in standard deviations.
+                                            </p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li>• <strong>Z &gt; +1.0:</strong> Ward has significantly more issues than average</li>
+                                                <li>• <strong>0 to +1.0:</strong> Ward has slightly more issues than average</li>
+                                                <li>• <strong>Z &lt; 0:</strong> Ward has fewer issues than average</li>
+                                            </ul>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="font-semibold mb-2">Priority Weighted Scoring</p>
+                                            <p className="leading-relaxed mb-2">
+                                                Wards are scored based on admin-defined priority weights for each issue type. Score = Σ(issue_count × weight).
+                                            </p>
+                                            <p className="text-xs">
+                                                Higher weights indicate more critical issues.
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </h3>
+                        </h3>
+
+                        {/* Admin Link */}
+                        <Link
+                            href="/vizag/admin"
+                            className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-2 text-sm font-medium"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Admin Settings
+                        </Link>
+                    </div>
                     <p className="text-sm text-gray-500 mb-4">
-                        Wards ranked by number of issues. Higher Z-scores indicate more issues relative to other wards.
+                        {scoringMode === 'statistical'
+                            ? 'Wards ranked by number of issues. Higher Z-scores indicate more issues relative to other wards.'
+                            : 'Wards ranked by priority-weighted scores. Scores reflect both issue count and admin-defined priority levels.'
+                        }
                     </p>
 
-                    <WardLeaderboard issues={issues} isDarkMode={false} maxItems={10} showMetrics={true} />
+                    <WardLeaderboard
+                        issues={issues}
+                        isDarkMode={false}
+                        maxItems={10}
+                        showMetrics={scoringMode === 'statistical'}
+                        scoringMode={scoringMode}
+                        weights={weights}
+                    />
                 </div>
+
+                {/* Remove Admin Settings Modal from main page */}
 
 
                 {/* Charts Grid - Enhanced */}
