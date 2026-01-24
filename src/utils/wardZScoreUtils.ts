@@ -198,10 +198,10 @@ export function getSeverityBadgeColor(severity: WardSeverity): {
             };
         case 'LOW':
             return {
-                bg: 'bg-green-500/10',
-                text: 'text-green-500',
-                border: 'border-green-500/20',
-                icon: '🟢'
+                bg: 'bg-blue-500/10',
+                text: 'text-blue-500',
+                border: 'border-blue-500/20',
+                icon: '🔵'
             };
     }
 }
@@ -232,10 +232,10 @@ export function getSeverityBadgeColorDark(severity: WardSeverity): {
             };
         case 'LOW':
             return {
-                bg: 'bg-green-400/10',
-                text: 'text-green-400',
-                border: 'border-green-400/20',
-                icon: '🟢'
+                bg: 'bg-blue-400/10',
+                text: 'text-blue-400',
+                border: 'border-blue-400/20',
+                icon: '🔵'
             };
     }
 }

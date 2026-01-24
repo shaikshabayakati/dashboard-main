@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     computeWardZScores,
     issuesDataToWardInput,
@@ -24,6 +25,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
     maxItems = 10,
     showMetrics = true
 }) => {
+    const router = useRouter();
     const [showAll, setShowAll] = useState(false);
     const [hoveredWard, setHoveredWard] = useState<number | null>(null);
 
@@ -37,6 +39,11 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
 
     const getSeverityColors = (severity: WardStats['severity']) => {
         return isDarkMode ? getSeverityBadgeColorDark(severity) : getSeverityBadgeColor(severity);
+    };
+
+    // Handle ward card click - navigate to view page with ward filter
+    const handleWardClick = (wardId: number) => {
+        router.push(`/vizag/view?ward=${wardId}`);
     };
 
     // Count wards by severity
@@ -57,70 +64,6 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
 
     return (
         <div className="space-y-4">
-            {/* Global Metrics Card */}
-            {showMetrics && (
-                <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-[#1a1b23] border border-gray-800' : 'bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg">📊</span>
-                        <h3 className={`text-sm font-bold ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
-                            Statistical Overview
-                        </h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-[#13141a]' : 'bg-white'} shadow-sm`}>
-                            <div className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wide`}>
-                                City Average
-                            </div>
-                            <div className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'} mt-1`}>
-                                {metrics.mean.toFixed(1)}
-                            </div>
-                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                reports/ward
-                            </div>
-                        </div>
-
-                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-[#13141a]' : 'bg-white'} shadow-sm`}>
-                            <div className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wide`}>
-                                Std Deviation
-                            </div>
-                            <div className={`text-xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'} mt-1`}>
-                                ±{metrics.standardDeviation.toFixed(1)}
-                            </div>
-                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                spread
-                            </div>
-                        </div>
-
-                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-[#13141a]' : 'bg-white'} shadow-sm`}>
-                            <div className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wide`}>
-                                Total Reports
-                            </div>
-                            <div className={`text-xl font-bold ${isDarkMode ? 'text-orange-400' : 'text-orange-600'} mt-1`}>
-                                {metrics.totalReports}
-                            </div>
-                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                across {metrics.wardCount} wards
-                            </div>
-                        </div>
-
-                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-[#13141a]' : 'bg-white'} shadow-sm`}>
-                            <div className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wide`}>
-                                Distribution
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                                <span className="text-red-500 text-sm font-bold">🔴 {severityCounts.HIGH || 0}</span>
-                                <span className="text-orange-500 text-sm font-bold">🟠 {severityCounts.MEDIUM || 0}</span>
-                                <span className="text-green-500 text-sm font-bold">🟢 {severityCounts.LOW || 0}</span>
-                            </div>
-                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                by severity
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Ward Cards */}
             <div className="space-y-2">
                 {displayedWards.map((ward, index) => {
@@ -137,6 +80,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                     : `bg-white ${isHovered ? 'shadow-md border-purple-300' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'}`
                                 }
                             `}
+                            onClick={() => handleWardClick(ward.wardId)}
                             onMouseEnter={() => setHoveredWard(ward.wardId)}
                             onMouseLeave={() => setHoveredWard(null)}
                         >
@@ -176,7 +120,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                     </div>
                                     <div className={`
                                         text-lg font-bold tabular-nums
-                                        ${ward.zScore > 0 ? 'text-red-500' : ward.zScore < 0 ? 'text-green-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+                                        ${ward.zScore > 0 ? 'text-red-500' : ward.zScore < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
                                     `}>
                                         {ward.zScore > 0 ? '+' : ''}{ward.zScore.toFixed(2)}
                                     </div>
@@ -191,7 +135,7 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                         </div>
                                         <div className={`
                                             text-sm font-semibold
-                                            ${ward.deviationFromAverage > 0 ? 'text-red-500' : ward.deviationFromAverage < 0 ? 'text-green-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+                                            ${ward.deviationFromAverage > 0 ? 'text-red-500' : ward.deviationFromAverage < 0 ? 'text-blue-500' : isDarkMode ? 'text-gray-300' : 'text-gray-600'}
                                         `}>
                                             {ward.deviationFromAverage > 0 ? '+' : ''}{ward.deviationFromAverage.toFixed(1)}%
                                         </div>
@@ -219,8 +163,8 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                     {ward.severity === 'HIGH'
                                         ? 'This ward has significantly more issues than most other wards and needs urgent attention.'
                                         : ward.severity === 'MEDIUM'
-                                            ? 'This ward has slightly more issues than the city average.'
-                                            : 'This ward is performing better than the city average.'
+                                            ? 'This ward has slightly more issues than most wards.'
+                                            : 'This ward has fewer issues than most wards.'
                                     }
                                 </div>
                             )}
@@ -267,9 +211,9 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span>🟢</span>
+                        <span>🔵</span>
                         <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                            <strong className="text-green-500">LOW</strong>: Z {'<'} 0 (Better than average)
+                            <strong className="text-blue-500">LOW</strong>: Z {'<'} 0 (Fewer issues)
                         </span>
                     </div>
                 </div>

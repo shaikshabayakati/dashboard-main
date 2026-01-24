@@ -41,7 +41,7 @@ const COLORS = {
     'unverified': '#F59E0B',
     'high': '#DC2626',
     'medium': '#F59E0B',
-    'low': '#10B981',
+    'low': '#3B82F6',
     'unknown': '#94A3B8'
 };
 
@@ -355,9 +355,31 @@ export default function VizagDashboard() {
                         <span className="w-1.5 h-6 bg-gradient-to-b from-red-500 via-orange-500 to-green-500 rounded-full"></span>
                         Ward Severity Leaderboard
                         <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">Z-Score Based</span>
+                        <div className="group relative inline-block">
+                            <svg
+                                className="w-5 h-5 text-gray-400 hover:text-purple-600 cursor-help transition-colors"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                            {/* Tooltip */}
+                            <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-80 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl">
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                <p className="font-semibold mb-2">What is Z-Score?</p>
+                                <p className="leading-relaxed mb-2">
+                                    Z-score is a statistical measure that shows how far a ward's issue count is from the average, measured in standard deviations.
+                                </p>
+                                <ul className="space-y-1 text-xs">
+                                    <li>• <strong>Z &gt; +1.0:</strong> Ward has significantly more issues than average</li>
+                                    <li>• <strong>0 to +1.0:</strong> Ward has slightly more issues than average</li>
+                                    <li>• <strong>Z &lt; 0:</strong> Ward has fewer issues than average</li>
+                                </ul>
+                            </div>
+                        </div>
                     </h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Wards classified by statistical deviation from city average. Higher Z-scores indicate more issues relative to other wards.
+                        Wards ranked by number of issues. Higher Z-scores indicate more issues relative to other wards.
                     </p>
 
                     <WardLeaderboard issues={issues} isDarkMode={false} maxItems={10} showMetrics={true} />

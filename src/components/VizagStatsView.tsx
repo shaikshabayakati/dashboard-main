@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useCombinedIssues } from '@/hooks/useCombinedIssues';
 import { GeneralIssue, PrimaryIssueType, SubCategoryType } from '@/types/GeneralIssue';
 import { Outfit } from 'next/font/google';
@@ -55,6 +56,7 @@ const ExpandableText = ({
 
 export default function VizagStatsView() {
     const { issues: allIssues, isLoading, error } = useCombinedIssues();
+    const searchParams = useSearchParams();
 
     // Filter: only verified reports with valid ward assignments
     const issues = useMemo(() =>
@@ -87,6 +89,14 @@ export default function VizagStatsView() {
     const [visibleCount, setVisibleCount] = useState(10);
     const [loadedImages, setLoadedImages] = useState<Record<number, string>>({});
     const observerRef = useRef<HTMLTableRowElement | null>(null);
+
+    // Read ward parameter from URL and set it as filter
+    React.useEffect(() => {
+        const wardParam = searchParams.get('ward');
+        if (wardParam) {
+            setWardFilter(wardParam);
+        }
+    }, [searchParams]);
 
     // Reset pagination when filters change
     React.useEffect(() => {
@@ -233,7 +243,7 @@ export default function VizagStatsView() {
         const s = (severity || '').toLowerCase();
         if (s.includes('high')) return 'text-red-400 bg-red-400/10 border-red-400/20';
         if (s.includes('medium')) return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
-        if (s.includes('low')) return 'text-green-400 bg-green-400/10 border-green-400/20';
+        if (s.includes('low')) return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
         return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
     };
 
@@ -288,8 +298,23 @@ export default function VizagStatsView() {
     return (
         <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0b0d] text-white' : 'bg-gray-50 text-gray-900'} flex ${outfit.className}`}>
             {/* Collapsible Filter Sidebar */}
-            <div className={`${isDarkMode ? 'bg-[#13141a] border-gray-800' : 'bg-white border-gray-200'} border-r transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden flex-shrink-0`}>
-                <div className={`p-4 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-b flex items-center justify-between`}>
+            <div className={`
+                ${isDarkMode
+                    ? 'bg-[#13141a]/95 border-gray-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.4)]'
+                    : 'bg-white/95 border-gray-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.08)]'
+                } 
+                border-r backdrop-blur-xl transition-all duration-300 
+                ${sidebarOpen ? 'w-72' : 'w-0'} 
+                overflow-hidden flex-shrink-0 relative z-20
+            `}>
+                <div className={`
+                    p-4 
+                    ${isDarkMode
+                        ? 'border-gray-800/50 bg-gradient-to-r from-purple-900/10 to-transparent'
+                        : 'border-gray-200/50 bg-gradient-to-r from-purple-50/50 to-transparent'
+                    } 
+                    border-b flex items-center justify-between backdrop-blur-sm
+                `}>
                     <h2 className="text-sm font-semibold flex items-center gap-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -305,7 +330,7 @@ export default function VizagStatsView() {
                         <select
                             value={issueTypeFilter}
                             onChange={(e) => setIssueTypeFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="all">All Types</option>
                             <option value="Road">🛣️ Road</option>
@@ -322,7 +347,7 @@ export default function VizagStatsView() {
                         <select
                             value={wardFilter}
                             onChange={(e) => setWardFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="">All Wards</option>
                             {stats.wards.map((ward) => (
@@ -339,7 +364,7 @@ export default function VizagStatsView() {
                         <select
                             value={zoneFilter}
                             onChange={(e) => setZoneFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="">All Zones</option>
                             {stats.zones.map((zone) => (
@@ -360,7 +385,7 @@ export default function VizagStatsView() {
                             placeholder="Search address..."
                             value={locationFilter}
                             onChange={(e) => setLocationFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white placeholder-gray-500 shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 placeholder-gray-400 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200`}
                         />
                     </div>
 
@@ -371,7 +396,7 @@ export default function VizagStatsView() {
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         />
                     </div>
 
@@ -382,7 +407,7 @@ export default function VizagStatsView() {
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         />
                     </div>
                     {/* Clear Filters */}
@@ -397,7 +422,7 @@ export default function VizagStatsView() {
                                 setEndDate('');
                                 setSeverityFilter('all');
                             }}
-                            className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                            className="w-full px-4 py-2.5 rounded-lg text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 transition-all duration-200 shadow-lg shadow-red-500/10 hover:shadow-red-500/20"
                         >
                             Clear Filters
                         </button>
@@ -409,12 +434,12 @@ export default function VizagStatsView() {
                         <select
                             value={severityFilter}
                             onChange={(e) => setSeverityFilter(e.target.value)}
-                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="all">All Severities</option>
                             <option value="high">🔴 High</option>
                             <option value="medium">🟡 Medium</option>
-                            <option value="low">🟢 Low</option>
+                            <option value="low">🔵 Low</option>
                         </select>
                     </div>
 
