@@ -35,35 +35,6 @@ export default function VizagAdminPage() {
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-100 shadow-[0_2px_8px_rgb(0,0,0,0.04)]">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => router.push('/vizag')}
-                                className="p-2 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                            </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-slate-900">Admin Settings</h1>
-                                <p className="text-sm text-gray-500">Configure ward scoring system</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${scoringMode === 'statistical'
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                {scoringMode === 'statistical' ? 'Statistical Mode' : 'Weighted Mode'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-6 py-8">

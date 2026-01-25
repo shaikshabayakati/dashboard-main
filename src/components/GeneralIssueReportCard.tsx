@@ -56,17 +56,7 @@ const GeneralIssueReportCard: React.FC<GeneralIssueReportCardProps> = ({ issue, 
                         )}
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-
-                        {issue.isAuthentic && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                ✓ Verified
-                            </span>
-                        )}
-                        {!issue.isAuthentic && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
-                                ⚠ Unverified
-                            </span>
-                        )}
+                        {/* Verification badges removed */}
                     </div>
                 </div>
 

@@ -86,6 +86,7 @@ const VizagMapView: React.FC<VizagMapViewProps> = ({ issues, selectedWard, selec
         minZoom: 3,
         maxZoom: 20,
         clickableIcons: false,
+        scrollwheel: false, // Disable scroll wheel zoom
         styles: [
             {
                 featureType: 'poi',

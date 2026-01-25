@@ -4,6 +4,12 @@ import { DatabasePotholeReport } from '@/types/PotholeReport';
 import { mapDatabaseGeneralIssuesToFrontend } from '@/utils/generalIssueMapper';
 import { mapPotholeReportsToGeneralIssues } from '@/utils/reportMapper';
 
+interface UseCombinedIssuesParams {
+    district?: string | null;
+    mandal?: string | null;
+    wardNumber?: number | null;
+}
+
 interface UseCombinedIssuesReturn {
     issues: GeneralIssue[];
     isLoading: boolean;
@@ -15,7 +21,7 @@ interface UseCombinedIssuesReturn {
  * Custom hook that fetches and combines both general issues and pothole reports
  * Pothole reports are transformed to match the GeneralIssue interface
  */
-export function useCombinedIssues(): UseCombinedIssuesReturn {
+export function useCombinedIssues(params?: UseCombinedIssuesParams): UseCombinedIssuesReturn {
     const [issues, setIssues] = useState<GeneralIssue[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,10 +31,25 @@ export function useCombinedIssues(): UseCombinedIssuesReturn {
             setIsLoading(true);
             setError(null);
 
+            // Build query string for pothole reports
+            const queryParams = new URLSearchParams();
+            if (params?.district) {
+                queryParams.append('district', params.district);
+            }
+            if (params?.mandal) {
+                queryParams.append('mandal', params.mandal);
+            }
+            if (params?.wardNumber !== null && params?.wardNumber !== undefined) {
+                queryParams.append('wardNumber', params.wardNumber.toString());
+            }
+
+            const queryString = queryParams.toString();
+            const potholeReportsUrl = `/api/reports${queryString ? `?${queryString}` : ''}`;
+
             // Fetch both data sources in parallel
             const [generalIssuesResponse, potholeReportsResponse] = await Promise.all([
                 fetch('/api/general-issues'),
-                fetch('/api/reports')
+                fetch(potholeReportsUrl)
             ]);
 
             // Check for errors
@@ -67,7 +88,7 @@ export function useCombinedIssues(): UseCombinedIssuesReturn {
 
     useEffect(() => {
         fetchIssues();
-    }, []);
+    }, [params?.district, params?.mandal, params?.wardNumber]);
 
     return {
         issues,

@@ -11,6 +11,9 @@ import {
     Pie,
     LineChart,
     Line,
+    AreaChart,
+    Area,
+    ComposedChart,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -20,7 +23,7 @@ import {
     Cell
 } from 'recharts';
 import dynamic from 'next/dynamic';
-import { Outfit } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import WardLeaderboard from '@/components/WardLeaderboard';
 import {
     getScoringMode,
@@ -28,7 +31,7 @@ import {
     IssueWeights
 } from '@/utils/weightedScoringUtils';
 
-const outfit = Outfit({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] });
 
 // Dynamically import map component
 const MiniMapView = dynamic(() => import('@/components/MiniMapView'), {
@@ -36,18 +39,20 @@ const MiniMapView = dynamic(() => import('@/components/MiniMapView'), {
     loading: () => <div className="w-full h-full bg-gray-100 animate-pulse"></div>
 });
 
+// Professional institutional color palette - warm orange/amber gradient scheme
 const COLORS = {
-    'Road': '#EF4444',
-    'Footpath': '#3B82F6',
-    'Electricity': '#EAB308',
-    'Garbage/sewage': '#F97316',
-    'Stray animals': '#8B5CF6',
-    'verified': '#10B981',
-    'unverified': '#F59E0B',
-    'high': '#DC2626',
-    'medium': '#F59E0B',
-    'low': '#3B82F6',
-    'unknown': '#94A3B8'
+    // Issue categories - warm orange/amber gradient (matches dashboard theme)
+    'Road': '#dc2626',           // red-600
+    'Footpath': '#ea580c',       // orange-600
+    'Electricity': '#f59e0b',    // amber-500
+    'Garbage/sewage': '#f97316', // orange-500
+    'Stray animals': '#fb923c',  // orange-400
+
+    // Severity - limited to 3 colors (high contrast, accessible)
+    'high': '#c0392b',
+    'medium': '#f39c12',
+    'low': '#27ae60',
+    'unknown': '#95a5a6'
 };
 
 export default function VizagDashboard() {
@@ -206,6 +211,97 @@ export default function VizagDashboard() {
         });
     }, [issues]);
 
+    // Week-over-Week Comparison Data
+    const weekComparisonData = useMemo(() => {
+        const days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            d.setHours(0, 0, 0, 0);
+            return d;
+        });
+
+        return days.map(date => {
+            // Current week (this day)
+            const thisWeekCount = issues.filter(i => {
+                const issueDate = new Date(i.createdAt);
+                issueDate.setHours(0, 0, 0, 0);
+                return issueDate.getTime() === date.getTime();
+            }).length;
+
+            // Previous week (same day, 7 days ago)
+            const prevWeekDate = new Date(date);
+            prevWeekDate.setDate(prevWeekDate.getDate() - 7);
+            const lastWeekCount = issues.filter(i => {
+                const issueDate = new Date(i.createdAt);
+                issueDate.setHours(0, 0, 0, 0);
+                return issueDate.getTime() === prevWeekDate.getTime();
+            }).length;
+
+            return {
+                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                thisWeek: thisWeekCount,
+                lastWeek: lastWeekCount
+            };
+        });
+    }, [issues]);
+
+    // Issue Types by Ward (Stacked Bar Chart Data)
+    const issuesByWardData = useMemo(() => {
+        // Get top 7 wards
+        const wardCounts = issues.reduce((acc, i) => {
+            const ward = i.wardNumber!;
+            acc[ward] = (acc[ward] || 0) + 1;
+            return acc;
+        }, {} as Record<number, number>);
+
+        const topWards = Object.entries(wardCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 7)
+            .map(([ward]) => parseInt(ward));
+
+        // Count issues by type for each ward
+        return topWards.map(ward => {
+            const wardIssues = issues.filter(i => i.wardNumber === ward);
+            const byType = wardIssues.reduce((acc, i) => {
+                const type = i.primaryIssue || 'Unknown';
+                acc[type] = (acc[type] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+
+            return {
+                ward: `Ward ${ward}`,
+                Road: byType['Road'] || 0,
+                Footpath: byType['Footpath'] || 0,
+                Electricity: byType['Electricity'] || 0,
+                'Garbage/sewage': byType['Garbage/sewage'] || 0,
+                'Stray animals': byType['Stray animals'] || 0,
+            };
+        });
+    }, [issues]);
+
+    // Extended 14-day trend for area chart
+    const extendedTrendData = useMemo(() => {
+        const last14Days = Array.from({ length: 14 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (13 - i));
+            d.setHours(0, 0, 0, 0);
+            return d;
+        });
+
+        return last14Days.map(date => {
+            const dayIssues = issues.filter(i => {
+                const issueDate = new Date(i.createdAt);
+                issueDate.setHours(0, 0, 0, 0);
+                return issueDate.getTime() === date.getTime();
+            });
+
+            return {
+                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                reports: dayIssues.length
+            };
+        });
+    }, [issues]);
+
     // Removed: verificationData (all issues are verified)
     const severityData = useMemo(() => {
         const counts = issues.reduce((acc, i) => {
@@ -264,32 +360,14 @@ export default function VizagDashboard() {
     }
 
     return (
-        <div className={`min-h-screen bg-[#f8fafc] ${outfit.className}`}>
-            {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border-b border-gray-100">
-                <div className="px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-start gap-3">
-                        <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="384" height="21.3334" fill="#F97316" />
-                            <path d="M0 128H128V256L0 128Z" fill="#F97316" />
-                            <path d="M383.097 0.819894C388.584 -1.19088 394.308 1.19482 399.965 0.819894C408.298 2.11517 416.732 3.5126 424.692 6.4781C426.86 7.19386 428.994 7.94417 431.094 8.7281C437.801 11.5231 444.372 14.7273 450.503 18.6812C467.202 28.7707 481.565 42.7465 491.93 59.4146C510.119 87.8425 516.216 123.735 508.527 156.663C499.585 197.736 468.93 232.981 429.875 247.707C416.19 253.263 401.489 255.376 386.856 256.501C401.591 256.432 416.19 259.91 429.977 264.92C462.02 277.567 488.983 303.54 501.82 335.82C504.056 340.66 505.208 345.909 507.104 350.885C508.866 358.793 511 366.668 510.729 374.848C512.525 381.154 512.321 387.699 510.729 394.004C511.034 400.106 509.408 405.901 508.73 411.9C507.105 414.184 507.884 417.286 506.156 419.536C506.055 420.354 505.852 421.956 505.75 422.774C504.836 424.171 504.259 425.705 504.056 427.376C502.904 429.864 501.99 432.454 501.075 435.079C498.941 439.578 496.976 444.214 494.267 448.407C485.019 464.734 472.148 479.05 456.566 489.514C454.67 490.775 452.773 492.037 450.876 493.264C446.405 495.991 441.764 498.411 437.157 500.933C434.617 501.854 432.042 502.774 429.604 503.967C418.595 508.194 407.01 510.375 395.426 511.977C348.983 511.842 302.506 512.209 256.062 511.815V127.482C298.44 127.418 340.785 127.484 383.13 127.451C383.096 85.2179 383.198 43.0186 383.097 0.819894ZM128.062 385.347V385.416C128.042 385.393 128.021 385.37 128 385.347C128.021 385.347 128.042 385.347 128.062 385.347Z" fill="#F97316" />
-                            <path d="M128 384V512H256L128 384Z" fill="#F97316" />
-                        </svg>
-                        <div className="flex flex-col">
-                            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Vizag Municipal Dashboard</h1>
-                            <p className="text-sm font-medium text-slate-500">Real-time Analytics & Urban Insights</p>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
-                {/* Top Row: Map + Recent Issues + Issue Types */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Map Preview Card - Larger */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-white to-slate-50">
-                            <h2 className="text-base font-semibold text-gray-900">Map View</h2>
+        <div className={`${inter.className} bg-slate-50 min-h-screen`}>
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+                {/* Top Row: Map (2/3) + Stacked Recent/Reports (1/3) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Map Preview Card - 2/3 Width */}
+                    <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-slate-900">Map View</h2>
                             <Link
                                 href="/vizag/map"
                                 className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
@@ -300,96 +378,98 @@ export default function VizagDashboard() {
                                 </svg>
                             </Link>
                         </div>
-                        <div className="h-[400px] relative">
+                        <div className="h-[500px] relative overflow-hidden">
                             <MiniMapView issues={issues} />
                         </div>
                     </div>
 
-                    {/* Recent Issues Card */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-white to-slate-50">
-                            <h2 className="text-base font-bold text-slate-900">Recent Issues</h2>
-                            <Link
-                                href="/vizag/view"
-                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 transition-colors"
-                            >
-                                Full List View
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </Link>
-                        </div>
-                        <div className="h-[400px] overflow-y-auto">
-                            {recentIssues.map(issue => (
-                                <div key={issue.id} className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-orange-50 text-orange-600 border border-orange-100">
-                                            {issue.primaryIssue || 'Unknown'}
-                                        </span>
-                                        {issue.subCategory === 'Potholes' && (
-                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-red-500/10 text-red-600 border border-red-400/20">
-                                                🕳️ Pothole
+                    {/* Right Column: Recent Issues + Reports Stacked */}
+                    <div className="space-y-8">
+                        {/* Recent Issues Card */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h2 className="text-sm font-bold text-slate-900">Recent Issues</h2>
+                                <Link
+                                    href="/vizag/view"
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700 transition-colors"
+                                >
+                                    Full List View
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </Link>
+                            </div>
+                            <div className="h-[220px] overflow-y-auto scrollbar-hide">
+                                {recentIssues.map(issue => (
+                                    <div key={issue.id} className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-orange-50 text-orange-600 border border-orange-100">
+                                                {issue.primaryIssue || 'Unknown'}
                                             </span>
-                                        )}
-                                        <span className="text-xs text-gray-500">
-                                            Ward {issue.wardNumber || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 line-clamp-2">{issue.address}</p>
-                                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                                        <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Issue Types Breakdown Card */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <div className="p-4 border-b border-slate-50 bg-gradient-to-r from-white to-slate-50">
-                            <h2 className="text-base font-bold text-slate-900">{issues.length} Citizen Reports</h2>
-                        </div>
-                        <div className="h-[400px] overflow-y-auto p-3">
-                            <div className="space-y-2">
-                                {categoryData.map((cat, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors">
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="w-3 h-3 rounded-full"
-                                                style={{ backgroundColor: COLORS[cat.name as keyof typeof COLORS] || '#94A3B8' }}
-                                            ></div>
-                                            <span className="text-sm text-gray-700">{cat.name}</span>
+                                            {issue.subCategory === 'Potholes' && (
+                                                <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-red-500/10 text-red-600 border border-red-400/20">
+                                                    Pothole
+                                                </span>
+                                            )}
+                                            <span className="text-xs text-gray-500">
+                                                Ward {issue.wardNumber || 'N/A'}
+                                            </span>
                                         </div>
-                                        <span className="text-sm font-semibold text-gray-900">{cat.value}</span>
+                                        <p className="text-sm text-gray-700 line-clamp-2">{issue.address}</p>
+                                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                            <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
+                                        </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Issue Types Breakdown Card - Redesigned with Progress Bars */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                <h2 className="text-sm font-bold text-slate-900 tabular-nums">{issues.length} Citizen Reports</h2>
+                            </div>
+                            <div className="p-4">
+                                <div className="space-y-3">
+                                    {categoryData.map((cat, idx) => {
+                                        const percentage = Math.round((cat.value / issues.length) * 100);
+                                        return (
+                                            <div key={idx} className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className="w-3 h-3 rounded-full"
+                                                            style={{ backgroundColor: COLORS[cat.name as keyof typeof COLORS] || '#94A3B8' }}
+                                                        ></div>
+                                                        <span className="text-sm font-medium text-slate-700">{cat.name}</span>
+                                                    </div>
+                                                    <span className="text-sm font-bold text-slate-900 tabular-nums">{cat.value} ({percentage}%)</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-500"
+                                                        style={{
+                                                            width: `${percentage}%`,
+                                                            backgroundColor: COLORS[cat.name as keyof typeof COLORS] || '#94A3B8'
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* KPI Cards Row - Premium Styled */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-orange-50/30 group hover:scale-[1.02] transition-all duration-300">
-                        <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Issues Today</div>
-                        <div className="mt-3 text-4xl font-black text-slate-900 group-hover:text-orange-600 transition-colors">{kpis.totalToday}</div>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-blue-50/30 group hover:scale-[1.02] transition-all duration-300">
-                        <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Weekly Reports</div>
-                        <div className="mt-3 text-4xl font-black text-blue-600 transition-colors">{kpis.weeklyReports}</div>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 bg-gradient-to-br from-white to-purple-50/30 group hover:scale-[1.02] transition-all duration-300">
-                        <div className="text-[12px] font-base font-semibold text-gray-900 uppercase tracking-[0.2em]">Top Ward</div>
-                        <div className="mt-3 text-2xl font-black text-slate-900 group-hover:text-purple-600 transition-colors">{kpis.topWard}</div>
-                    </div>
-                </div>
 
 
                 {/* Ward Leaderboard - Z-Score Based Classification */}
-                <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                <div className="bg-white p-6 rounded-sm border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-gradient-to-b from-red-500 via-orange-500 to-green-500 rounded-full"></span>
+                        <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <span className="w-1.5 h-6 bg-gradient-to-b from-red-600 via-amber-500 to-green-600 rounded-full"></span>
                             Ward Severity Leaderboard
                             <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${scoringMode === 'statistical'
                                 ? 'bg-purple-100 text-purple-700'
@@ -399,7 +479,7 @@ export default function VizagDashboard() {
                             </span>
                             <div className="group relative inline-block">
                                 <svg
-                                    className="w-5 h-5 text-gray-400 hover:text-purple-600 cursor-help transition-colors"
+                                    className="w-5 h-5 text-slate-400 hover:text-teal-700 cursor-help transition-colors"
                                     fill="currentColor"
                                     viewBox="0 0 20 20"
                                 >
@@ -438,7 +518,7 @@ export default function VizagDashboard() {
                         {/* Admin Link */}
                         <Link
                             href="/vizag/admin"
-                            className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-2 text-sm font-medium"
+                            className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -447,7 +527,7 @@ export default function VizagDashboard() {
                             Admin Settings
                         </Link>
                     </div>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-slate-600 mb-4">
                         {scoringMode === 'statistical'
                             ? 'Wards ranked by number of issues. Higher Z-scores indicate more issues relative to other wards.'
                             : 'Wards ranked by priority-weighted scores. Scores reflect both issue count and admin-defined priority levels.'
@@ -467,123 +547,207 @@ export default function VizagDashboard() {
                 {/* Remove Admin Settings Modal from main page */}
 
 
-                {/* Charts Grid - Enhanced */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
+                {/* Charts Grid - Diverse Chart Types */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-8">
                     {/* Ward Distribution Chart */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
-                            Ward-wise Distribution
-                        </h3>
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-blue-600 rounded-sm shadow-sm"></span>
+                                Ward-wise Distribution
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={wardData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="ward" axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} dy={10} />
+                                <XAxis dataKey="ward" axisLine={false} tickLine={false} style={{ fontSize: '10px', fontWeight: 600, fill: '#64748b' }} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
                                 <YAxis axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} />
-                                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                <Bar dataKey="count" fill="#F97316" radius={[4, 4, 0, 0]} barSize={30} />
+                                <Tooltip
+                                    cursor={{ fill: '#f8fafc' }}
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
 
                     {/* Category Donut Chart */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
-                            Issue Categories
-                        </h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={categoryData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={8}
-                                    dataKey="value"
-                                    label={({ name, value }) => `${name}: ${value}`}
-                                >
-                                    {categoryData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#94A3B8'} stroke="none" />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 relative">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-indigo-600 rounded-sm shadow-sm"></span>
+                                Issue Categories
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <div className="h-[300px] relative">
+                            {/* Central Text Overlay */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+                                <span className="text-4xl font-bold text-slate-800">{issues.length}</span>
+                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Issues</span>
+                            </div>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={categoryData}
+                                        cx="50%"
+                                        cy="45%"
+                                        innerRadius={75}
+                                        outerRadius={95}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {categoryData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#94A3B8'} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                    <Legend
+                                        verticalAlign="bottom"
+                                        height={36}
+                                        iconType="circle"
+                                        iconSize={8}
+                                        wrapperStyle={{ fontSize: '11px', color: '#64748b' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
-                    {/* Image Compliance */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                            Image Upload Compliance
-                        </h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={imageData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={8}
-                                    dataKey="value"
-                                    label={({ name, value }) => `${name}: ${value}`}
-                                >
-                                    <Cell fill="#10B981" stroke="none" />
-                                    <Cell fill="#F59E0B" stroke="none" />
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    {/* Image Compliance - Storage Style */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-emerald-500 rounded-sm shadow-sm"></span>
+                                Image Evidence
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <div className="h-[300px] relative">
+                            {/* Central Text Overlay */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+                                <span className="text-3xl font-bold text-slate-800">
+                                    {Math.round((issues.filter(i => i.imageUrl).length / (issues.length || 1)) * 100)}%
+                                </span>
+                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">With Image</span>
+                            </div>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={imageData}
+                                        cx="50%"
+                                        cy="45%"
+                                        innerRadius={75}
+                                        outerRadius={95}
+                                        paddingAngle={0}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        <Cell fill="#10B981" />
+                                        <Cell fill="#E2E8F0" />
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
-                    {/* Trend Line Chart */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-orange-400 rounded-full"></span>
-                            7-Day Trend
-                        </h3>
+                    {/* Week-over-Week Comparison - Dual Line Chart */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-orange-500 rounded-sm shadow-sm"></span>
+                                Week-over-Week Comparison
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
                         <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={trendData}>
+                            <LineChart data={weekComparisonData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} />
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                                <Line type="monotone" dataKey="total" stroke="#F97316" strokeWidth={3} dot={{ r: 4, fill: '#F97316', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+                                <Line
+                                    type="monotone"
+                                    dataKey="thisWeek"
+                                    name="This Week"
+                                    stroke="#F97316"
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: '#fff', strokeWidth: 2, stroke: '#F97316' }}
+                                    activeDot={{ r: 6, fill: '#F97316', stroke: '#fff', strokeWidth: 2 }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="lastWeek"
+                                    name="Last Week"
+                                    stroke="#3B82F6"
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: '#fff', strokeWidth: 2, stroke: '#3B82F6' }}
+                                    activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                                />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
 
-
-
-                    {/* Severity Distribution */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-                        <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-red-500 rounded-full"></span>
-                            Severity Distribution
-                        </h3>
+                    {/* Issue Types by Ward - Stacked Bar Chart */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-purple-600 rounded-sm shadow-sm"></span>
+                                Issue Types by Ward
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
                         <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={severityData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={8}
-                                    dataKey="value"
-                                    label={({ name, value }) => `${name}: ${value}`}
-                                >
-                                    {severityData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
+                            <BarChart data={issuesByWardData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="ward" axisLine={false} tickLine={false} style={{ fontSize: '10px', fontWeight: 600, fill: '#64748b' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Legend iconType="rect" wrapperStyle={{ fontSize: '11px' }} />
+                                <Bar dataKey="Road" stackId="a" fill="#005670" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="Footpath" stackId="a" fill="#007a99" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="Electricity" stackId="a" fill="#0099b8" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="Garbage/sewage" stackId="a" fill="#00b8d4" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="Stray animals" stackId="a" fill="#33c3dc" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Daily Reports Trend - Area Chart */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="w-1.5 h-5 bg-cyan-500 rounded-sm shadow-sm"></span>
+                                14-Day Reports Trend
+                            </h3>
+                            <span className="text-xs font-medium text-slate-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <AreaChart data={extendedTrendData}>
+                                <defs>
+                                    <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: '10px', fontWeight: 600, fill: '#64748b' }} dy={10} interval={1} angle={-45} textAnchor="end" height={60} />
+                                <YAxis axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 600, fill: '#64748b' }} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Area
+                                    type="monotone"
+                                    dataKey="reports"
+                                    stroke="#06B6D4"
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorReports)"
+                                />
+                            </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>

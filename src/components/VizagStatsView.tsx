@@ -296,7 +296,7 @@ export default function VizagStatsView() {
     }
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0b0d] text-white' : 'bg-gray-50 text-gray-900'} flex ${outfit.className}`}>
+        <div className={`h-screen ${isDarkMode ? 'bg-[#0a0b0d] text-white' : 'bg-gray-50 text-gray-900'} flex ${outfit.className}`}>
             {/* Collapsible Filter Sidebar */}
             <div className={`
                 ${isDarkMode
@@ -305,7 +305,7 @@ export default function VizagStatsView() {
                 } 
                 border-r backdrop-blur-xl transition-all duration-300 
                 ${sidebarOpen ? 'w-72' : 'w-0'} 
-                overflow-hidden flex-shrink-0 relative z-20
+                overflow-hidden flex-shrink-0 relative z-20 h-full
             `}>
                 <div className={`
                     p-4 
@@ -333,11 +333,11 @@ export default function VizagStatsView() {
                             className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="all">All Types</option>
-                            <option value="Road">🛣️ Road</option>
-                            <option value="Footpath">🚶 Footpath</option>
-                            <option value="Electricity">⚡ Electricity</option>
-                            <option value="Garbage/sewage">🗑️ Garbage/Sewage</option>
-                            <option value="Stray animals">🐕 Stray Animals</option>
+                            <option value="Road">Road</option>
+                            <option value="Footpath">Footpath</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Garbage/sewage">Garbage/Sewage</option>
+                            <option value="Stray animals">Stray Animals</option>
                         </select>
                     </div>
 
@@ -437,9 +437,9 @@ export default function VizagStatsView() {
                             className={`w-full ${isDarkMode ? 'bg-[#1a1b23] border-gray-700/50 text-white shadow-lg shadow-black/20' : 'bg-white border-gray-300/50 text-gray-900 shadow-md shadow-gray-200/50'} border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:border-purple-400/50 transition-all duration-200 cursor-pointer`}
                         >
                             <option value="all">All Severities</option>
-                            <option value="high">🔴 High</option>
-                            <option value="medium">🟡 Medium</option>
-                            <option value="low">🔵 Low</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
                         </select>
                     </div>
 
@@ -450,39 +450,7 @@ export default function VizagStatsView() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto h-screen flex flex-col">
-                {/* Toggle Sidebar Button */}
-                <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className={`fixed top-4 ${sidebarOpen ? 'left-[300px]' : 'left-4'} z-30 ${isDarkMode ? 'bg-[#13141a] border-gray-800 hover:bg-[#1a1b23]' : 'bg-white border-gray-300 hover:bg-gray-50'} p-3 rounded-lg border-2 transition-all duration-300 shadow-lg`}
-                    title={sidebarOpen ? 'Close Filters' : 'Open Filters'}
-                >
-                    <svg className={`w-5 h-5 transition-transform duration-300 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {sidebarOpen ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        )}
-                    </svg>
-                </button>
-
-
-
-                {/* Header */}
-                <div className={`py-4 pr-4 ${sidebarOpen ? 'pl-24' : 'pl-20'} ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-b flex-shrink-0 transition-all duration-300`}>
-                    <div className="flex items-center gap-3">
-                        <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="384" height="21.3334" fill="#F97316" />
-                            <path d="M0 128H128V256L0 128Z" fill="#F97316" />
-                            <path d="M383.097 0.819894C388.584 -1.19088 394.308 1.19482 399.965 0.819894C408.298 2.11517 416.732 3.5126 424.692 6.4781C426.86 7.19386 428.994 7.94417 431.094 8.7281C437.801 11.5231 444.372 14.7273 450.503 18.6812C467.202 28.7707 481.565 42.7465 491.93 59.4146C510.119 87.8425 516.216 123.735 508.527 156.663C499.585 197.736 468.93 232.981 429.875 247.707C416.19 253.263 401.489 255.376 386.856 256.501C401.591 256.432 416.19 259.91 429.977 264.92C462.02 277.567 488.983 303.54 501.82 335.82C504.056 340.66 505.208 345.909 507.104 350.885C508.866 358.793 511 366.668 510.729 374.848C512.525 381.154 512.321 387.699 510.729 394.004C511.034 400.106 509.408 405.901 508.73 411.9C507.105 414.184 507.884 417.286 506.156 419.536C506.055 420.354 505.852 421.956 505.75 422.774C504.836 424.171 504.259 425.705 504.056 427.376C502.904 429.864 501.99 432.454 501.075 435.079C498.941 439.578 496.976 444.214 494.267 448.407C485.019 464.734 472.148 479.05 456.566 489.514C454.67 490.775 452.773 492.037 450.876 493.264C446.405 495.991 441.764 498.411 437.157 500.933C434.617 501.854 432.042 502.774 429.604 503.967C418.595 508.194 407.01 510.375 395.426 511.977C348.983 511.842 302.506 512.209 256.062 511.815V127.482C298.44 127.418 340.785 127.484 383.13 127.451C383.096 85.2179 383.198 43.0186 383.097 0.819894ZM128.062 385.347V385.416C128.042 385.393 128.021 385.37 128 385.347C128.021 385.347 128.042 385.347 128.062 385.347Z" fill="#F97316" />
-                            <path d="M128 384V512H256L128 384Z" fill="#F97316" />
-                        </svg>
-                        <div>
-                            <h1 className="text-xl font-bold">Visakhapatnam Issues Analytics</h1>
-                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Overview of general issues</p>
-                        </div>
-                    </div>
-                </div>
+            <div className="flex-1 overflow-y-auto h-screen flex flex-col relative">
 
                 {/* Issues List - Scrollable Content */}
                 <div className="flex-1 overflow-y-auto">

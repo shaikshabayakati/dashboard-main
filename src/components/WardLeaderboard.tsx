@@ -185,7 +185,9 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                                         px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border flex items-center gap-1.5
                                         ${colors.bg} ${colors.text} ${colors.border}
                                     `}>
-                                        <span>{colors.icon}</span>
+                                        <span className="w-2 h-2 rounded-full" style={{
+                                            backgroundColor: ward.severity === 'HIGH' ? '#ef4444' : ward.severity === 'MEDIUM' ? '#f59e0b' : '#22c55e'
+                                        }}></span>
                                         <span>{ward.severity}</span>
                                     </div>
                                 </div>
@@ -213,20 +215,22 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
             </div>
 
             {/* Show More/Less Button */}
-            {wardStats.length > maxItems && (
-                <button
-                    onClick={() => setShowAll(!showAll)}
-                    className={`
+            {
+                wardStats.length > maxItems && (
+                    <button
+                        onClick={() => setShowAll(!showAll)}
+                        className={`
                         w-full py-2.5 rounded-lg text-sm font-medium transition-colors
                         ${isDarkMode
-                            ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20'
-                            : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
-                        }
+                                ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20'
+                                : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
+                            }
                     `}
-                >
-                    {showAll ? `Show Top ${maxItems} Only` : `Show All ${wardStats.length} Wards`}
-                </button>
-            )}
+                    >
+                        {showAll ? `Show Top ${maxItems} Only` : `Show All ${wardStats.length} Wards`}
+                    </button>
+                )
+            }
 
             {/* Legend */}
             <div className={`
@@ -234,25 +238,25 @@ const WardLeaderboard: React.FC<WardLeaderboardProps> = ({
                 ${isDarkMode ? 'bg-[#1a1b23] border border-gray-800' : 'bg-slate-50 border border-slate-200'}
             `}>
                 <div className={`font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>
-                    📝 Classification Guide
+                    Classification Guide
                 </div>
                 <div className="flex flex-wrap gap-3">
                     <div className="flex items-center gap-1.5">
-                        <span>🔴</span>
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
                         <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                            <strong className="text-red-500">HIGH</strong>: Z {'>'} 1.0 (Significantly worse)
+                            <strong className="text-red-500">HIGH</strong>: Z {'>'} 1.0
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span>🟠</span>
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                         <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                            <strong className="text-orange-500">MEDIUM</strong>: 0 ≤ Z ≤ 1.0 (Slightly worse)
+                            <strong className="text-amber-500">MEDIUM</strong>: 0 ≤ Z ≤ 1.0
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span>🔵</span>
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
                         <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                            <strong className="text-blue-500">LOW</strong>: Z {'<'} 0 (Fewer issues)
+                            <strong className="text-green-500">LOW</strong>: Z {'<'} 0
                         </span>
                     </div>
                 </div>

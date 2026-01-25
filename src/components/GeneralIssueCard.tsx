@@ -30,17 +30,6 @@ const GeneralIssueCard: React.FC<GeneralIssueCardProps> = ({ issue, onClose, isE
                         <span className="font-bold text-lg">
                             {issue.primaryIssue || 'Unknown Issue'}
                         </span>
-
-                        {!issue.isAuthentic && (
-                            <span className="text-xs bg-red-500/80 px-2 py-0.5 rounded font-semibold">
-                                ⚠ Not Verified
-                            </span>
-                        )}
-                        {issue.isAuthentic && (
-                            <span className="text-xs bg-green-500/80 px-2 py-0.5 rounded font-semibold">
-                                ✓ Verified
-                            </span>
-                        )}
                     </div>
                     {issue.subCategory && issue.subCategory !== 'None' && (
                         <div className="text-sm opacity-90 mt-1">{issue.subCategory}</div>
